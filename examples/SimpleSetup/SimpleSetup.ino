@@ -6,13 +6,13 @@
 
 /* These variables need to be filled out with the information for your wifi details */
 /* and the mqtt broker */
-String wifi_ssid = "";
-String wifi_password = "";
-String mqtt_broker_ip = "";
-String mqtt_username = "";
-String mqtt_password = "";
-String host_name = "";
-String mqtt_topic = "";
+char const* wifi_ssid = "";
+char const* wifi_password = "";
+char const* mqtt_broker_ip = "";
+char const* mqtt_user = "";
+char const* mqtt_password = "";
+char const* host_name = "";
+char const* mqtt_topic = "";
 
 AutoHome autohome;
 
