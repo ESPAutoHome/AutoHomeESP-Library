@@ -11,9 +11,4 @@ loop(); // This needs to be placed in the loop function. This handles all the ba
 
 begin("Wifi SSID", "Wifi Password", "MQTT Broker IP", "MQTT Username","MQTT Password", "Device Host Name", "MQTT Subscribe Topic") // This sets up all the information to connect to the wifi and MQTT Broker.
 
-sendPacket("Message"); // This sends a message to the mqtt topic that is stated in the begin function;
-
-sendPacket("Topic", "Message"); // This sends a message to a specified topic
-
-
 ```
