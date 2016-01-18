@@ -1,7 +1,8 @@
 #ifndef Wifi_H
 #define Wifi_H
 
-#include "../AutoHome.h"
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
 
 class Wifi {
 

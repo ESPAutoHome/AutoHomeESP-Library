@@ -1,7 +1,12 @@
 #ifndef OTAUpdate_H
 #define OTAUpdate_H
 
-#include "../AutoHome.h"
+#include <Arduino.h>
+#include <ESP8266mDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
 
 class OTAUpdate {
 

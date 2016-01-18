@@ -1,7 +1,8 @@
 #ifndef MQTT_H
 #define MQTT_H
 
-#include "../AutoHome.h"
+#include <Arduino.h>
+#include <PubSubClient.h>
 
 class MQTT {
 

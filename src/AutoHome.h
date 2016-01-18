@@ -2,13 +2,6 @@
 #define AutoHome_H
 
 #include <Arduino.h>
-#include <ESP8266mDNS.h>
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h> 
-#include <ESP8266WebServer.h>
-#include <PubSubClient.h>
 #include "utility/Wifi.h"
 #include "utility/OTAUpdate.h"
 #include "utility/MQTT.h"
