@@ -40,6 +40,25 @@ void AutoHome::begin(char const* wifi_ssid, char const* wifi_password, char cons
 
 }
 
+void AutoHome::begin(char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* mqtt_channel){
+
+	Serial.println("AutoHome Starting");
+
+	wifi.begin();
+
+	ota.begin(host);
+
+	pubclient.setServer(mqtt_ip, 1883);
+
+	mqtt.reconnect(pubclient, mqtt_channel, host, mqtt_user, mqtt_password);
+
+	p_mqtt_channel = mqtt_channel;
+	p_host = host;
+	p_mqtt_user = mqtt_user;
+	p_mqtt_password = mqtt_password;	
+
+}
+
 void AutoHome::loop(){
 
   if (!pubclient.connected()) {
