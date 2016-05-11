@@ -11,12 +11,16 @@ void Wifi::begin(char const* wifi_ssid, char const* wifi_password){
   Serial.print("Connecting to ");
   Serial.println(wifi_ssid);
 
-  wifiManager.autoConnect(wifi_ssid, wifi_password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  if (!wifiManager.autoConnect(wifi_ssid, wifi_password)){
+	  
+	Serial.println("failed to connect and hit timeout");
+	delay(3000);
+	//reset and try again, or maybe put it to deep sleep
+	ESP.reset();
+	delay(5000);
+	  
   }
+
 
   Serial.println("");
   Serial.println("WiFi connected");
@@ -32,11 +36,14 @@ void Wifi::begin(){
 
   Serial.print("Using AutoWifi");
 
-  wifiManager.autoConnect();
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  if (!wifiManager.autoConnect()){
+	  
+	Serial.println("failed to connect and hit timeout");
+	delay(3000);
+	//reset and try again, or maybe put it to deep sleep
+	ESP.reset();
+	delay(5000);
+	  
   }
 
   Serial.println("");

@@ -1,6 +1,18 @@
-/* This example is a simple setup example to show you how to setup the AutoHome library. */
+/* This example is an advanced setup example to show you how to setup the AutoHome library. */
+/* If you run this example with the variables filled out the esp will print out any */
+/* received packets from the mqtt broker */
 
 #include <AutoHome.h>
+
+/* These variables need to be filled out with the information for your wifi details */
+/* and the mqtt broker */
+char const* wifi_ssid = "";
+char const* wifi_password = "";
+char const* mqtt_broker_ip = "";
+char const* mqtt_user = "";
+char const* mqtt_password = "";
+char const* host_name = "";
+char const* mqtt_topic = "";
 
 AutoHome autohome;
 
@@ -28,7 +40,7 @@ void setup() {
   autohome.setPacketHandler(mqtt_callback);
 
   /* This starts the library and connects the esp to the wifi and the mqtt broker */
-  autohome.begin();
+  autohome.begin(wifi_ssid, wifi_password, mqtt_broker_ip, mqtt_user, mqtt_password, host_name, mqtt_topic);
 
 }
 

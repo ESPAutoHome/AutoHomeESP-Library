@@ -6,6 +6,8 @@ OTAUpdate::~OTAUpdate(){}
 
 void OTAUpdate::begin(char const* host){
 
+  ArduinoOTA.setPort(8266);
+
   ArduinoOTA.setHostname(host);
 
   ArduinoOTA.onStart([]() {
@@ -36,5 +38,7 @@ void OTAUpdate::begin(char const* host){
   });
   
   ArduinoOTA.begin();
+  
+  Serial.println("OTA Ready");
 
 }
