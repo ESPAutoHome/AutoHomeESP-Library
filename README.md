@@ -5,6 +5,7 @@ Librarys needed to run this library:
 
 	-PubSubClient
 	-WiFiManager
+	-ArduinoJson
 	
 Flash size settings for upload:
 
