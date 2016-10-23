@@ -26,6 +26,7 @@ public:
 	void loop();
 	void sendPacket(char const* message);
 	void sendPacket(char const* topic, const char* message);
+	void resetSettings();
 };
 
 #endif

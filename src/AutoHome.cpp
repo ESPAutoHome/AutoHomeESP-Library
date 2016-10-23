@@ -5,6 +5,7 @@ OTAUpdate ota;
 WiFiClient espClient;
 PubSubClient pubclient(espClient);
 MQTT mqtt;
+WiFiManager wifiManager;
 
 char const* p_mqtt_channel;
 char const* p_host;
@@ -29,6 +30,7 @@ AutoHome::~AutoHome(){}
 void AutoHome::setPacketHandler(void(*mqttcallback)(char*,uint8_t*,unsigned int)){
 
 	pubclient.setCallback(mqttcallback);
+	
 
 }
 
@@ -37,6 +39,12 @@ void saveConfigCallback() {
   Serial.println("Should save config");
   shouldSaveConfig = true;
   
+}
+
+void AutoHome::resetSettings(){
+	
+	SPIFFS.format();
+	
 }
 
 void AutoHome::begin(){
@@ -94,8 +102,6 @@ void AutoHome::begin(){
 	WiFiManagerParameter custom_mqtt_password("j_mqtt_password", "MQTT password", j_mqtt_password, 30);
 	WiFiManagerParameter custom_mqtt_channel("j_mqtt_channel", "MQTT channel", j_mqtt_channel, 50);
 	WiFiManagerParameter custom_host("j_host", "Host Name", j_host, 20);
-	
-	WiFiManager wifiManager;
 	
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
 	

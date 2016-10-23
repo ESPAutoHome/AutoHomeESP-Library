@@ -29,6 +29,8 @@ sendPacket("Message"); // This sends a message to the mqtt topic that is stated 
 
 sendPacket("Topic", "Message"); // This sends a message to a specified topic
 
+resetSettings(); // This will reset all the setings by formating the SPIFFS
+
 
 ```
 
