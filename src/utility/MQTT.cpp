@@ -17,13 +17,12 @@ void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char cons
       Serial.println("connected");
 
       pubclient.subscribe(mqtt_channel);
+	  pubclient.subscribe("/autohome");
 
     } else {
       Serial.print("failed, rc=");
       Serial.print(pubclient.state());
       Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
     }
 
   }
