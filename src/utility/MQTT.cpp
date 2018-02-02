@@ -17,7 +17,7 @@ void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char cons
       Serial.println("connected");
 
       pubclient.subscribe(mqtt_channel);
-	  pubclient.subscribe("/autohome");
+	    pubclient.subscribe("/autohome");
 
     } else {
       Serial.print("failed, rc=");

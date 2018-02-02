@@ -8,13 +8,17 @@ AutoHome autohome;
 /* This is registered in the setup() */
 void mqtt_callback(char* topic, byte* payload, unsigned int length){
 
-  String packet = "";
+  if(!autohome.mqtt_callback(topic, payload, length)){
 
-  for (int i = 0; i < length; i++) {
-    packet = packet + (char)payload[i];
+      String packet = "";
+
+      for (int i = 0; i < length; i++) {
+        packet = packet + (char)payload[i];
+      }
+
+      Serial.print(packet);
+
   }
-
-  Serial.print(packet);
   
 }
 

@@ -74,10 +74,15 @@ char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
 			
 			Serial.println("Autohome Scan Packet");
 			
-			String responce = "SCANRET:" + String(p_device_name) + ":" + String(j_device_type) + ":" + String(p_device_serial) + ":" + String(p_mqtt_channel);
+			String responce = "SCANRET:" + String(p_device_name) + ":" + String(j_device_type) + ":" + String(p_device_serial) + ":" + String(p_mqtt_channel) + ":" + String(WiFi.RSSI());
 			
 			sendPacket("/autohome", responce.c_str());
 			
+		} else if(getValue(packet, ":",0).equals("INFO")){
+			if(String(p_device_name).equals(getValue(packet, ":",1))){
+				String responce = "INFORES:" + String(p_device_name) + ":" + String(j_device_type) + ":" + String(p_device_serial) + ":" + String(p_mqtt_channel) + ":" + String(WiFi.RSSI());
+				sendPacket("/autohome", responce.c_str());
+			}
 		}
 		
 		return 1;
