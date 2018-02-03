@@ -6,6 +6,7 @@ Librarys needed to run this library:
 	-PubSubClient
 	-WiFiManager
 	-ArduinoJson
+	-WiFiManager
 	
 Flash size settings for upload:
 
@@ -44,3 +45,15 @@ AdvancedSetup - This enables you to input any details using the variables in the
 
 
 ```
+
+built into the libary is some universall MQTT calls, 
+- topic - - payload - 
+/autohome : SCAN 
+	gives
+		String responce = "SCANRET:" + String(p_device_name) + ":" + String(j_device_type) + ":" + String(p_device_serial) + ":" + String(p_mqtt_channel) + ":" + String(WiFi.RSSI()) ;
+		Device name : Device tyep : Device serial number : MQTT channel : wifi signal strenght in dB
+
+- topic - - payload -
+/autohome : INFO :"name"
+	gives
+		returns the same as above but only for the device named.
