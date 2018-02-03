@@ -1,11 +1,15 @@
 #include "AutoHome.h"
 
+#define DRD_TIMEOUT 10
+#define DRD_ADDRESS 0
+
 Wifi wifi;
 OTAUpdate ota;
 WiFiClient espClient;
 PubSubClient pubclient(espClient);
 MQTT mqtt;
 WiFiManager wifiManager;
+DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
 char const* p_mqtt_channel;
 char const* p_host;
@@ -78,8 +82,8 @@ char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
 			
 			sendPacket("/autohome", responce.c_str());
 			
-		} else if(getValue(packet, ":",0).equals("INFO")){
-			if(String(p_device_name).equals(getValue(packet, ":",1))){
+		} else if(getValue(packet, ':',0).equals("INFO")){
+			if(String(p_device_name).equals(getValue(packet, ':',1))){
 				String responce = "INFORES:" + String(p_device_name) + ":" + String(j_device_type) + ":" + String(p_device_serial) + ":" + String(p_mqtt_channel) + ":" + String(WiFi.RSSI());
 				sendPacket("/autohome", responce.c_str());
 			}
@@ -180,7 +184,11 @@ void AutoHome::begin(){
 	wifiManager.addParameter(&custom_device_type);
 	wifiManager.addParameter(&custom_device_serial);
 
-	if (!wifiManager.autoConnect()){
+	wifiManager.setConfigPortalTimeout(180);
+
+	if(drd.detectDoubleReset()){
+		wifiManager.startConfigPortal("Autohome");
+	} else if (!wifiManager.autoConnect()){
 	  
 		Serial.println("failed to connect and hit timeout");
 		delay(3000);
@@ -302,6 +310,8 @@ void AutoHome::loop(){
 	}
 
 	pubclient.loop();
+
+	drd.loop();
 
 }
 
