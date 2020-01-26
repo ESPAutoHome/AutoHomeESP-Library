@@ -33,9 +33,19 @@ char j_device_serial[20];
 
 bool shouldSaveConfig = false;
 
+int watchdogTimeoutValue = 15000;
+bool watchdogRecieved = true;
+long previousWatchdogPacketTime = 0;
+
 AutoHome::AutoHome(){}
 
 AutoHome::~AutoHome(){}
+
+void AutoHome::setWatchdogTimeout(int timeout){
+
+	watchdogTimeoutValue = timeout;
+
+}
 
 void AutoHome::setPacketHandler(void(*mqttcallback)(char*,uint8_t*,unsigned int)){
 
@@ -45,6 +55,7 @@ void AutoHome::setPacketHandler(void(*mqttcallback)(char*,uint8_t*,unsigned int)
 
 String AutoHome::getValue(String data, char separator, int index)
 {
+
   int found = 0;
   int strIndex[] = {0, -1};
   int maxIndex = data.length() - 1;
@@ -58,6 +69,7 @@ String AutoHome::getValue(String data, char separator, int index)
   }
 
   return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+
 }
 
 char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
@@ -69,6 +81,7 @@ char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
 	}
 
 	char autohomeTopic[] = "/autohome";
+	char watchdogTopic[] = "/autohome/watchdog";
 
     if(strcmp(topic, autohomeTopic) == 0){
 		
@@ -91,6 +104,13 @@ char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
 		
 		return 1;
 		
+	}
+
+	if(strcmp(topic, watchdogTopic) == 0){
+
+		watchdogRecieved = true;
+		return 1;
+
 	}
 	
 	return 0;
@@ -303,6 +323,8 @@ void AutoHome::begin(char const* mqtt_ip, char const* mqtt_user, char const* mqt
 
 void AutoHome::loop(){
 	
+	long currentTime = millis();
+
 	ArduinoOTA.handle();
 
 	if (!pubclient.connected()) {
@@ -312,6 +334,22 @@ void AutoHome::loop(){
 	pubclient.loop();
 
 	drd.loop();
+
+	if(currentTime - previousWatchdogPacketTime >= watchdogTimeoutValue ){
+
+		previousWatchdogPacketTime = currentTime;
+
+		if(!watchdogRecieved){
+
+			ESP.restart();
+
+		} else {
+
+			watchdogRecieved = false;
+
+		}
+
+	}
 
 }
 

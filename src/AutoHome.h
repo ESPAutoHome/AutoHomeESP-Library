@@ -28,6 +28,7 @@ public:
 	void sendPacket(char const* message);
 	void sendPacket(char const* topic, const char* message);
 	void resetSettings();
+	void setWatchdogTimeout(int timeout);
 	char mqtt_callback(char* topic, byte* payload, unsigned int length);
 	String getValue(String data, char separator, int index);
 };

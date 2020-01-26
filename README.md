@@ -26,11 +26,13 @@ begin("MQTT Broker IP", "MQTT Username","MQTT Password", "Device Host Name", "MQ
 
 begin() // This is the super simple method. All you need to do is connect to the esp and setup the wifi and mqtt from the webpage.
 
-sendPacket("Message"); // This sends a message to the mqtt topic that is stated in the begin function;
+sendPacket("Message"); // This sends a message to the mqtt topic that is stated in the begin function.
 
-sendPacket("Topic", "Message"); // This sends a message to a specified topic
+sendPacket("Topic", "Message"); // This sends a message to a specified topic.
 
-resetSettings(); // This will reset all the setings by formating the SPIFFS
+resetSettings(); // This will reset all the setings by formating the SPIFFS.
+
+setWatchdogTimeout(int timeoutMills);  // This will change the default timeout value for watchdog.
 
 
 ```
@@ -57,3 +59,7 @@ built into the libary is some universall MQTT calls,
 /autohome : INFO :"name"
 	gives
 		returns the same as above but only for the device named.
+- topic - - payload -
+/autohome/watchdog : WATCHDOG
+	gives
+		nothing
