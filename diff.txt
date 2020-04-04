@@ -1,0 +1,1199 @@
+diff --git a/keywords.txt b/keywords.txt index aca4b0b..8fec540 100644 --- a/keywords.txt +++ b/keywords.txt @@ -1,3 +1,3 @@
+-AutoHome	KEYWORD1
+
+-begin		KEYWORD2
+
+-sendPacket	KEYWORD2
+
++AutoHome KEYWORD1 +begin KEYWORD2 +sendPacket	KEYWORD2 diff --git a/src/AutoHome.cpp b/src/AutoHome.cpp index c66a4fd..eb2d722 100644 --- a/src/AutoHome.cpp +++ 
+b/src/AutoHome.cpp @@ -1,328 +1,328 @@
+-#include "AutoHome.h"
+
+-
+
+-#define DRD_TIMEOUT 10
+
+-#define DRD_ADDRESS 0
+
+-
+
+-Wifi wifi;
+
+-OTAUpdate ota;
+
+-WiFiClient espClient;
+
+-PubSubClient pubclient(espClient);
+
+-MQTT mqtt;
+
+-WiFiManager wifiManager;
+
+-DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
+
+-
+
+-char const* p_mqtt_channel;
+
+-char const* p_host;
+
+-char const* p_mqtt_user;
+
+-char const* p_mqtt_password;
+
+-char const* p_mqtt_server;
+
+-char const* p_mqtt_port;
+
+-char const* p_device_name;
+
+-char const* p_device_type;
+
+-char const* p_device_serial;
+
+-
+
+-char j_mqtt_channel[50];
+
+-char j_host[20];
+
+-char j_mqtt_user[30];
+
+-char j_mqtt_password[30];
+
+-char j_mqtt_server[30];
+
+-char j_mqtt_port[10];
+
+-char j_device_name[20];
+
+-char j_device_type[20];
+
+-char j_device_serial[20];
+
+-
+
+-bool shouldSaveConfig = false;
+
+-
+
+-AutoHome::AutoHome(){}
+
+-
+
+-AutoHome::~AutoHome(){}
+
+-
+
+-void AutoHome::setPacketHandler(void(*mqttcallback)(char*,uint8_t*,unsigned int)){
+
+-
+
+-	pubclient.setCallback(mqttcallback);
+
+-
+
+-}
+
+-
+
+-String AutoHome::getValue(String data, char separator, int index)
+
+-{
+
+-  int found = 0;
+
+-  int strIndex[] = {0, -1};
+
+-  int maxIndex = data.length() - 1;
+
+-
+
+-  for (int i = 0; i <= maxIndex && found <= index; i++) {
+
+-    if (data.charAt(i) == separator || i == maxIndex) {
+
+-      found++;
+
+-      strIndex[0] = strIndex[1] + 1;
+
+-      strIndex[1] = (i == maxIndex) ? i + 1 : i;
+
+-    }
+
+-  }
+
+-
+
+-  return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+
+-}
+
+-
+
+-char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
+
+-
+
+-	String packet = "";
+
+-
+
+-	for (int i = 0; i < length; i++) {
+
+-		packet = packet + (char)payload[i];
+
+-	}
+
+-
+
+-	char autohomeTopic[] = "/autohome";
+
+-
+
+-    if(strcmp(topic, autohomeTopic) == 0){
+
+-		
+
+-		Serial.println("Autohome Packet");
+
+-		
+
+-		if(packet.equals("SCAN")){
+
+-			
+
+-			Serial.println("Autohome Scan Packet");
+
+-			
+
+-			String responce = "SCANRET:" + String(p_device_name) + ":" + String(j_device_type) + ":" + String(p_device_serial) + ":" + String(p_mqtt_channel) + 
+":" + String(WiFi.RSSI());
+
+-			
+
+-			sendPacket("/autohome", responce.c_str());
+
+-			
+
+-		} else if(getValue(packet, ':',0).equals("INFO")){
+
+-			if(String(p_device_name).equals(getValue(packet, ':',1))){
+
+-				String responce = "INFORES:" + String(p_device_name) + ":" + String(j_device_type) + ":" + String(p_device_serial) + ":" + 
+String(p_mqtt_channel) + ":" + String(WiFi.RSSI());
+
+-				sendPacket("/autohome", responce.c_str());
+
+-			}
+
+-		}
+
+-		
+
+-		return 1;
+
+-		
+
+-	}
+
+-	
+
+-	return 0;
+
+-  
+
+-}
+
+-
+
+-void saveConfigCallback() {
+
+-	
+
+-  Serial.println("Should save config");
+
+-  shouldSaveConfig = true;
+
+-  
+
+-}
+
+-
+
+-void AutoHome::resetSettings(){
+
+-	
+
+-	SPIFFS.format();
+
+-	
+
+-}
+
+-
+
+-void AutoHome::begin(){
+
+-	
+
+-	Serial.println("mounting FS...");
+
+-
+
+-	if (SPIFFS.begin()) {
+
+-		
+
+-		Serial.println("mounted file system");
+
+-		if (SPIFFS.exists("/AutoHome_config.json")) {
+
+-		  //file exists, reading and loading
+
+-		  Serial.println("reading config file");
+
+-		  File configFile = SPIFFS.open("/AutoHome_config.json", "r");
+
+-		  
+
+-		  if (configFile) {
+
+-			Serial.println("opened config file");
+
+-			size_t size = configFile.size();
+
+-			// Allocate a buffer to store contents of the file.
+
+-			std::unique_ptr<char[]> buf(new char[size]);
+
+-
+
+-			configFile.readBytes(buf.get(), size);
+
+-			DynamicJsonBuffer jsonBuffer;
+
+-			JsonObject& json = jsonBuffer.parseObject(buf.get());
+
+-			json.printTo(Serial);
+
+-			
+
+-			if (json.success()) {
+
+-			  Serial.println("\nparsed json");
+
+-
+
+-			  strcpy(j_mqtt_server, json["j_mqtt_server"]);
+
+-			  strcpy(j_mqtt_port, json["j_mqtt_port"]);
+
+-			  strcpy(j_mqtt_user, json["j_mqtt_user"]);
+
+-			  strcpy(j_mqtt_password, json["j_mqtt_password"]);
+
+-			  strcpy(j_mqtt_channel, json["j_mqtt_channel"]);
+
+-			  strcpy(j_host, json["j_host"]);
+
+-			  strcpy(j_device_name, json["j_device_name"]);
+
+-			  strcpy(j_device_type, json["j_device_type"]);
+
+-			  strcpy(j_device_serial, json["j_device_serial"]);
+
+-
+
+-			} else {
+
+-				
+
+-			  Serial.println("failed to load json config");
+
+-			  
+
+-			}
+
+-			
+
+-		  }
+
+-		  
+
+-		}
+
+-	
+
+-	} else {
+
+-		
+
+-		Serial.println("failed to mount FS");
+
+-	
+
+-	}
+
+-	
+
+-	WiFiManagerParameter custom_mqtt_server("j_mqtt_server", "MQTT Server IP", j_mqtt_server, 30);
+
+-	WiFiManagerParameter custom_mqtt_port("j_mqtt_port", "MQTT Server Port", j_mqtt_port, 10);
+
+-	WiFiManagerParameter custom_mqtt_user("j_mqtt_user", "MQTT Username", j_mqtt_user, 30);
+
+-	WiFiManagerParameter custom_mqtt_password("j_mqtt_password", "MQTT password", j_mqtt_password, 30);
+
+-	WiFiManagerParameter custom_mqtt_channel("j_mqtt_channel", "MQTT channel", j_mqtt_channel, 50);
+
+-	WiFiManagerParameter custom_host("j_host", "Host Name", j_host, 20);
+
+-	WiFiManagerParameter custom_device_name("j_device_name", "Device Name", j_device_name, 20);
+
+-	WiFiManagerParameter custom_device_type("j_device_type", "Device Type", j_device_type, 20);
+
+-	WiFiManagerParameter custom_device_serial("j_device_serial", "Device Serial Number", j_device_serial, 20);
+
+-	
+
+-	wifiManager.setSaveConfigCallback(saveConfigCallback);
+
+-	
+
+-	wifiManager.addParameter(&custom_mqtt_server);
+
+-	wifiManager.addParameter(&custom_mqtt_port);
+
+-	wifiManager.addParameter(&custom_mqtt_user);
+
+-	wifiManager.addParameter(&custom_mqtt_password);
+
+-	wifiManager.addParameter(&custom_mqtt_channel);
+
+-	wifiManager.addParameter(&custom_host);
+
+-	wifiManager.addParameter(&custom_device_name);
+
+-	wifiManager.addParameter(&custom_device_type);
+
+-	wifiManager.addParameter(&custom_device_serial);
+
+-
+
+-	wifiManager.setConfigPortalTimeout(180);
+
+-
+
+-	if(drd.detectDoubleReset()){
+
+-		wifiManager.startConfigPortal("Autohome");
+
+-	} else if (!wifiManager.autoConnect()){
+
+-	  
+
+-		Serial.println("failed to connect and hit timeout");
+
+-		delay(3000);
+
+-		//reset and try again, or maybe put it to deep sleep
+
+-		ESP.reset();
+
+-		delay(5000);
+
+-	  
+
+-	}
+
+-
+
+-	Serial.println("");
+
+-	Serial.println("WiFi connected");
+
+-	Serial.println("IP address: ");
+
+-	Serial.println(WiFi.localIP());
+
+-	Serial.println("Started Up");
+
+-	
+
+-	strcpy(j_mqtt_server, custom_mqtt_server.getValue());
+
+-	strcpy(j_mqtt_port, custom_mqtt_port.getValue());
+
+-	strcpy(j_mqtt_user, custom_mqtt_user.getValue());
+
+-	strcpy(j_mqtt_password, custom_mqtt_password.getValue());
+
+-	strcpy(j_mqtt_channel, custom_mqtt_channel.getValue());
+
+-	strcpy(j_host, custom_host.getValue());
+
+-	strcpy(j_device_name, custom_device_name.getValue());
+
+-	strcpy(j_device_type, custom_device_type.getValue());
+
+-	strcpy(j_device_serial, custom_device_serial.getValue());
+
+-	
+
+-	if (shouldSaveConfig) {
+
+-		
+
+-		Serial.println("saving config");
+
+-		DynamicJsonBuffer jsonBuffer;
+
+-		JsonObject& json = jsonBuffer.createObject();
+
+-		json["j_mqtt_server"] = j_mqtt_server;
+
+-		json["j_mqtt_port"] = j_mqtt_port;
+
+-		json["j_mqtt_user"] = j_mqtt_user;
+
+-		json["j_mqtt_password"] = j_mqtt_password;
+
+-		json["j_mqtt_channel"] = j_mqtt_channel;
+
+-		json["j_host"] = j_host;
+
+-		json["j_device_name"] = j_device_name;
+
+-		json["j_device_type"] = j_device_type;
+
+-		json["j_device_serial"] = j_device_serial;
+
+-
+
+-		File configFile = SPIFFS.open("/AutoHome_config.json", "w");
+
+-		if (!configFile) {
+
+-		  Serial.println("failed to open config file for writing");
+
+-		}
+
+-
+
+-		json.printTo(Serial);
+
+-		json.printTo(configFile);
+
+-		configFile.close();
+
+-		
+
+-		Serial.println("local ip");
+
+-		Serial.println(WiFi.localIP());
+
+-		
+
+-	}
+
+-
+
+-	String port = String(j_mqtt_port);
+
+-	
+
+-	pubclient.setServer(j_mqtt_server, port.toInt());
+
+-
+
+-	mqtt.reconnect(pubclient, j_mqtt_channel, j_host, j_mqtt_user, j_mqtt_password);
+
+-
+
+-	p_mqtt_channel = j_mqtt_channel;
+
+-	p_host = j_host;
+
+-	p_mqtt_user = j_mqtt_user;
+
+-	p_mqtt_password = j_mqtt_password;	
+
+-	
+
+-	p_device_name = j_device_name;
+
+-	p_device_type = j_device_type;
+
+-	p_device_serial = j_device_serial;
+
+-	
+
+-	ota.begin(j_host);
+
+-	
+
+-	
+
+-}
+
+-
+
+-void AutoHome::begin(char const* wifi_ssid, char const* wifi_password, char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* 
+mqtt_channel){
+
+-
+
+-	Serial.println("AutoHome Starting");
+
+-
+
+-	wifi.begin(wifi_ssid, wifi_password);
+
+-
+
+-	pubclient.setServer(mqtt_ip, 1883);
+
+-
+
+-	mqtt.reconnect(pubclient, mqtt_channel, host, mqtt_user, mqtt_password);
+
+-
+
+-	p_mqtt_channel = mqtt_channel;
+
+-	p_host = host;
+
+-	p_mqtt_user = mqtt_user;
+
+-	p_mqtt_password = mqtt_password;
+
+-
+
+-	ota.begin(host);	
+
+-
+
+-}
+
+-
+
+-void AutoHome::begin(char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* mqtt_channel){
+
+-
+
+-	Serial.println("AutoHome Starting");
+
+-
+
+-	wifi.begin();
+
+-
+
+-	pubclient.setServer(mqtt_ip, 1883);
+
+-
+
+-	mqtt.reconnect(pubclient, mqtt_channel, host, mqtt_user, mqtt_password);
+
+-
+
+-	p_mqtt_channel = mqtt_channel;
+
+-	p_host = host;
+
+-	p_mqtt_user = mqtt_user;
+
+-	p_mqtt_password = mqtt_password;
+
+-
+
+-	ota.begin(host);
+
+-
+
+-}
+
+-
+
+-void AutoHome::loop(){
+
+-	
+
+-	ArduinoOTA.handle();
+
+-
+
+-	if (!pubclient.connected()) {
+
+-		mqtt.reconnect(pubclient, p_mqtt_channel, p_host, p_mqtt_user, p_mqtt_password);
+
+-	}
+
+-
+
+-	pubclient.loop();
+
+-
+
+-	drd.loop();
+
+-
+
+-}
+
+-
+
+-void AutoHome::sendPacket(char const* message){
+
+-
+
+-	pubclient.publish(p_mqtt_channel, message);
+
+-
+
+-}
+
+-
+
+-void AutoHome::sendPacket(char const* topic, char const* message){
+
+-
+
+-	pubclient.publish(topic, message);
+
+-
+
+-}
+
++#include "AutoHome.h" + +#define DRD_TIMEOUT 10 +#define DRD_ADDRESS 0 + +Wifi wifi; +OTAUpdate ota; +WiFiClient espClient; +PubSubClient pubclient(espClient); +MQTT mqtt; 
++WiFiManager wifiManager; +DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS); + +char const* p_mqtt_channel; +char const* p_host; +char const* p_mqtt_user; +char const* 
+p_mqtt_password; +char const* p_mqtt_server; +char const* p_mqtt_port; +char const* p_device_name; +char const* p_device_type; +char const* p_device_serial; + +char 
+j_mqtt_channel[50]; +char j_host[20]; +char j_mqtt_user[30]; +char j_mqtt_password[30]; +char j_mqtt_server[30]; +char j_mqtt_port[10]; +char j_device_name[20]; +char 
+j_device_type[20]; +char j_device_serial[20]; + +bool shouldSaveConfig = false; + +AutoHome::AutoHome(){} + +AutoHome::~AutoHome(){} + +void 
+AutoHome::setPacketHandler(void(*mqttcallback)(char*,uint8_t*,unsigned int)){ + + pubclient.setCallback(mqttcallback); + +} + +String AutoHome::getValue(String data, char 
+separator, int index) +{ + int found = 0; + int strIndex[] = {0, -1}; + int maxIndex = data.length() - 1; + + for (int i = 0; i <= maxIndex && found <= index; i++) { + if 
+(data.charAt(i) == separator || i == maxIndex) { + found++; + strIndex[0] = strIndex[1] + 1; + strIndex[1] = (i == maxIndex) ? i + 1 : i; + } + } + + return found > index ? 
+data.substring(strIndex[0], strIndex[1]) : ""; +} + +char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){ + + String packet = ""; + + for (int i = 
+0; i < length; i++) { + packet = packet + (char)payload[i]; + } + + char autohomeTopic[] = "/autohome"; + + if(strcmp(topic, autohomeTopic) == 0){ + + 
+Serial.println("Autohome Packet"); + + if(packet.equals("SCAN")){ + + Serial.println("Autohome Scan Packet"); + + String responce = "SCANRET:" + String(p_device_name) + ":" 
++ String(j_device_type) + ":" + String(p_device_serial) + ":" + String(p_mqtt_channel) + ":" + String(WiFi.RSSI()); + + sendPacket("/autohome", responce.c_str()); + + } 
+else if(getValue(packet, ':',0).equals("INFO")){ + if(String(p_device_name).equals(getValue(packet, ':',1))){ + String responce = "INFORES:" + String(p_device_name) + ":" + 
+String(j_device_type) + ":" + String(p_device_serial) + ":" + String(p_mqtt_channel) + ":" + String(WiFi.RSSI()); + sendPacket("/autohome", responce.c_str()); + } + } + + 
+return 1; + + } + + return 0; + +} + +void saveConfigCallback() { + + Serial.println("Should save config"); + shouldSaveConfig = true; + +} + +void 
+AutoHome::resetSettings(){ + + SPIFFS.format(); + +} + +void AutoHome::begin(){ + + Serial.println("mounting FS..."); + + if (SPIFFS.begin()) { + + Serial.println("mounted 
+file system"); + if (SPIFFS.exists("/AutoHome_config.json")) { + //file exists, reading and loading + Serial.println("reading config file"); + File configFile = 
+SPIFFS.open("/AutoHome_config.json", "r"); + + if (configFile) { + Serial.println("opened config file"); + size_t size = configFile.size(); + // Allocate a buffer to store 
+contents of the file. + std::unique_ptr<char[]> buf(new char[size]); + + configFile.readBytes(buf.get(), size); + DynamicJsonBuffer jsonBuffer; + JsonObject& json = 
+jsonBuffer.parseObject(buf.get()); + json.printTo(Serial); + + if (json.success()) { + Serial.println("\nparsed json"); + + strcpy(j_mqtt_server, json["j_mqtt_server"]); + 
+strcpy(j_mqtt_port, json["j_mqtt_port"]); + strcpy(j_mqtt_user, json["j_mqtt_user"]); + strcpy(j_mqtt_password, json["j_mqtt_password"]); + strcpy(j_mqtt_channel, 
+json["j_mqtt_channel"]); + strcpy(j_host, json["j_host"]); + strcpy(j_device_name, json["j_device_name"]); + strcpy(j_device_type, json["j_device_type"]); + 
+strcpy(j_device_serial, json["j_device_serial"]); + + } else { + + Serial.println("failed to load json config"); + + } + + } + + } + + } else { + + Serial.println("failed 
+to mount FS"); + + } + + WiFiManagerParameter custom_mqtt_server("j_mqtt_server", "MQTT Server IP", j_mqtt_server, 30); + WiFiManagerParameter 
+custom_mqtt_port("j_mqtt_port", "MQTT Server Port", j_mqtt_port, 10); + WiFiManagerParameter custom_mqtt_user("j_mqtt_user", "MQTT Username", j_mqtt_user, 30); + 
+WiFiManagerParameter custom_mqtt_password("j_mqtt_password", "MQTT password", j_mqtt_password, 30); + WiFiManagerParameter custom_mqtt_channel("j_mqtt_channel", "MQTT 
+channel", j_mqtt_channel, 50); + WiFiManagerParameter custom_host("j_host", "Host Name", j_host, 20); + WiFiManagerParameter custom_device_name("j_device_name", "Device 
+Name", j_device_name, 20); + WiFiManagerParameter custom_device_type("j_device_type", "Device Type", j_device_type, 20); + WiFiManagerParameter 
+custom_device_serial("j_device_serial", "Device Serial Number", j_device_serial, 20); + + wifiManager.setSaveConfigCallback(saveConfigCallback); + + 
+wifiManager.addParameter(&custom_mqtt_server); + wifiManager.addParameter(&custom_mqtt_port); + wifiManager.addParameter(&custom_mqtt_user); + 
+wifiManager.addParameter(&custom_mqtt_password); + wifiManager.addParameter(&custom_mqtt_channel); + wifiManager.addParameter(&custom_host); + 
+wifiManager.addParameter(&custom_device_name); + wifiManager.addParameter(&custom_device_type); + wifiManager.addParameter(&custom_device_serial); + + 
+wifiManager.setConfigPortalTimeout(180); + + if(drd.detectDoubleReset()){ + wifiManager.startConfigPortal("Autohome"); + } else if (!wifiManager.autoConnect()){ + + 
+Serial.println("failed to connect and hit timeout"); + delay(3000); + //reset and try again, or maybe put it to deep sleep + ESP.reset(); + delay(5000); + + } + + 
+Serial.println(""); + Serial.println("WiFi connected"); + Serial.println("IP address: "); + Serial.println(WiFi.localIP()); + Serial.println("Started Up"); + + 
+strcpy(j_mqtt_server, custom_mqtt_server.getValue()); + strcpy(j_mqtt_port, custom_mqtt_port.getValue()); + strcpy(j_mqtt_user, custom_mqtt_user.getValue()); + 
+strcpy(j_mqtt_password, custom_mqtt_password.getValue()); + strcpy(j_mqtt_channel, custom_mqtt_channel.getValue()); + strcpy(j_host, custom_host.getValue()); + 
+strcpy(j_device_name, custom_device_name.getValue()); + strcpy(j_device_type, custom_device_type.getValue()); + strcpy(j_device_serial, custom_device_serial.getValue()); + 
++ if (shouldSaveConfig) { + + Serial.println("saving config"); + DynamicJsonBuffer jsonBuffer; + JsonObject& json = jsonBuffer.createObject(); + json["j_mqtt_server"] = 
+j_mqtt_server; + json["j_mqtt_port"] = j_mqtt_port; + json["j_mqtt_user"] = j_mqtt_user; + json["j_mqtt_password"] = j_mqtt_password; + json["j_mqtt_channel"] = 
+j_mqtt_channel; + json["j_host"] = j_host; + json["j_device_name"] = j_device_name; + json["j_device_type"] = j_device_type; + json["j_device_serial"] = j_device_serial; + 
++ File configFile = SPIFFS.open("/AutoHome_config.json", "w"); + if (!configFile) { + Serial.println("failed to open config file for writing"); + } + + 
+json.printTo(Serial); + json.printTo(configFile); + configFile.close(); + + Serial.println("local ip"); + Serial.println(WiFi.localIP()); + + } + + String port = 
+String(j_mqtt_port); + + pubclient.setServer(j_mqtt_server, port.toInt()); + + mqtt.reconnect(pubclient, j_mqtt_channel, j_host, j_mqtt_user, j_mqtt_password); + + 
+p_mqtt_channel = j_mqtt_channel; + p_host = j_host; + p_mqtt_user = j_mqtt_user; + p_mqtt_password = j_mqtt_password; + + p_device_name = j_device_name; + p_device_type = 
+j_device_type; + p_device_serial = j_device_serial; + + ota.begin(j_host); + + +} + +void AutoHome::begin(char const* wifi_ssid, char const* wifi_password, char const* 
+mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* mqtt_channel){ + + Serial.println("AutoHome Starting"); + + wifi.begin(wifi_ssid, 
+wifi_password); + + pubclient.setServer(mqtt_ip, 1883); + + mqtt.reconnect(pubclient, mqtt_channel, host, mqtt_user, mqtt_password); + + p_mqtt_channel = mqtt_channel; + 
+p_host = host; + p_mqtt_user = mqtt_user; + p_mqtt_password = mqtt_password; + + ota.begin(host); + +} + +void AutoHome::begin(char const* mqtt_ip, char const* mqtt_user, 
+char const* mqtt_password, char const* host, char const* mqtt_channel){ + + Serial.println("AutoHome Starting"); + + wifi.begin(); + + pubclient.setServer(mqtt_ip, 1883); + 
++ mqtt.reconnect(pubclient, mqtt_channel, host, mqtt_user, mqtt_password); + + p_mqtt_channel = mqtt_channel; + p_host = host; + p_mqtt_user = mqtt_user; + p_mqtt_password 
+= mqtt_password; + + ota.begin(host); + +} + +void AutoHome::loop(){ + + ArduinoOTA.handle(); + + if (!pubclient.connected()) { + mqtt.reconnect(pubclient, p_mqtt_channel, 
+p_host, p_mqtt_user, p_mqtt_password); + } + + pubclient.loop(); + + drd.loop(); + +} + +void AutoHome::sendPacket(char const* message){ + + 
+pubclient.publish(p_mqtt_channel, message); + +} + +void AutoHome::sendPacket(char const* topic, char const* message){ + +	pubclient.publish(topic, message); + +} diff 
+--git a/src/AutoHome.h b/src/AutoHome.h index f1cf6a9..20cbabf 100644 --- a/src/AutoHome.h +++ b/src/AutoHome.h @@ -1,35 +1,35 @@
+-#ifndef AutoHome_H
+
+-#define AutoHome_H
+
+-
+
+-#include <Arduino.h>
+
+-#include <FS.h>
+
+-#include <WiFiManager.h>
+
+-#include <ArduinoJson.h>
+
+-#include <DoubleResetDetector.h>
+
+-
+
+-#include "utility/Wifi.h"
+
+-#include "utility/OTAUpdate.h"
+
+-#include "utility/MQTT.h"
+
+-
+
+-#define MQTT_SIGNATURE void (*mqttcallback)(char*,uint8_t*,unsigned int)
+
+-
+
+-class AutoHome {
+
+-private:
+
+-	MQTT_CALLBACK_SIGNATURE;
+
+-
+
+-public:
+
+-	AutoHome();
+
+-	~AutoHome();
+
+-	void setPacketHandler(MQTT_SIGNATURE);
+
+-	void begin(char const* wifi_ssid, char const* wifi_password, char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* 
+mqtt_channel);
+
+-	void begin(char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* mqtt_channel);
+
+-	void begin();
+
+-	void loop();
+
+-	void sendPacket(char const* message);
+
+-	void sendPacket(char const* topic, const char* message);
+
+-	void resetSettings();
+
+-	char mqtt_callback(char* topic, byte* payload, unsigned int length);
+
+-	String getValue(String data, char separator, int index);
+
+-};
+
+-
+
+-#endif
+
++#ifndef AutoHome_H +#define AutoHome_H + +#include <Arduino.h> +#include <FS.h> +#include <WiFiManager.h> +#include <ArduinoJson.h> +#include <DoubleResetDetector.h> + 
++#include "utility/Wifi.h" +#include "utility/OTAUpdate.h" +#include "utility/MQTT.h" + +#define MQTT_SIGNATURE void (*mqttcallback)(char*,uint8_t*,unsigned int) + +class 
+AutoHome { +private: +	MQTT_CALLBACK_SIGNATURE; + +public: +	AutoHome(); +	~AutoHome(); +	void setPacketHandler(MQTT_SIGNATURE); +	void begin(char const* 
+wifi_ssid, char const* wifi_password, char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* mqtt_channel); +	void 
+begin(char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* mqtt_channel); +	void begin(); +	void loop(); +	void 
+sendPacket(char const* message); +	void sendPacket(char const* topic, const char* message); +	void resetSettings(); +	char mqtt_callback(char* topic, byte* 
+payload, unsigned int length); +	String getValue(String data, char separator, int index); +}; + +#endif diff --git a/src/utility/MQTT.cpp b/src/utility/MQTT.cpp 
+index 028f5ad..0becdb9 100644 --- a/src/utility/MQTT.cpp +++ b/src/utility/MQTT.cpp @@ -1,31 +1,32 @@
+-#include "MQTT.h"
+
+-
+
+-MQTT::MQTT(){}
+
+-
+
+-MQTT::~MQTT(){}
+
+-
+
+-void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char const* mqtt_client, char const* mqtt_user, char const* mqtt_password){
+
+-    
+
+-  // Loop until we're reconnected
+
+-  if (!pubclient.connected()) {
+
+-
+
+-    Serial.print("Attempting MQTT connection...");
+
+-
+
+-    /* Connect to diffrent chennels */
+
+-
+
+-    if (pubclient.connect(mqtt_client, mqtt_user, mqtt_password)) {
+
+-      Serial.println("connected");
+
+-
+
+-      pubclient.subscribe(mqtt_channel);
+
+-	    pubclient.subscribe("/autohome");
+
+-
+
+-    } else {
+
+-      Serial.print("failed, rc=");
+
+-      Serial.print(pubclient.state());
+
+-      Serial.println(" try again in 5 seconds");
+
+-    }
+
+-
+
+-  }
+
+-
+
+-
+
+-}
+
++#include "MQTT.h" + +MQTT::MQTT(){} + +MQTT::~MQTT(){} + +void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char const* mqtt_client, char const* 
+mqtt_user, char const* mqtt_password){ + + // Loop until we're reconnected + if (!pubclient.connected()) { + + Serial.print("Attempting MQTT connection..."); + + /* Connect 
+to diffrent chennels */ + + if (pubclient.connect(mqtt_client, mqtt_user, mqtt_password)) { + Serial.println("connected"); + + pubclient.subscribe(mqtt_channel); + 
+pubclient.subscribe("/autohome"); + + } else { + Serial.print("failed, rc="); + Serial.print(pubclient.state()); + Serial.println(" try again in 5 seconds"); + delay(2000); 
++ } + + } + + +} diff --git a/src/utility/MQTT.h b/src/utility/MQTT.h index e126562..9cc7a68 100644 --- a/src/utility/MQTT.h +++ b/src/utility/MQTT.h @@ -1,15 +1,15 @@
+-#ifndef MQTT_H
+
+-#define MQTT_H
+
+-
+
+-#include <Arduino.h>
+
+-#include <PubSubClient.h>
+
+-
+
+-class MQTT {
+
+-
+
+-public:
+
+-	MQTT();
+
+-	~MQTT();
+
+-	void reconnect(PubSubClient pubclient, char const* mqtt_channel, char const* mqtt_client, char const* mqtt_user, char const* mqtt_password);
+
+-};
+
+-
+
+-#endif
+
++#ifndef MQTT_H +#define MQTT_H + +#include <Arduino.h> +#include <PubSubClient.h> + +class MQTT { + +public: +	MQTT(); +	~MQTT(); +	void reconnect(PubSubClient 
+pubclient, char const* mqtt_channel, char const* mqtt_client, char const* mqtt_user, char const* mqtt_password); +}; + +#endif diff --git a/src/utility/OTAUpdate.cpp 
+b/src/utility/OTAUpdate.cpp index aac288d..d2e6f08 100644 --- a/src/utility/OTAUpdate.cpp +++ b/src/utility/OTAUpdate.cpp @@ -1,44 +1,44 @@
+-#include "OTAUpdate.h"
+
+-
+
+-OTAUpdate::OTAUpdate(){}
+
+-
+
+-OTAUpdate::~OTAUpdate(){}
+
+-
+
+-void OTAUpdate::begin(char const* host){
+
+-
+
+-  ArduinoOTA.setPort(8266);
+
+-
+
+-  ArduinoOTA.setHostname(host);
+
+-
+
+-  ArduinoOTA.onStart([]() {
+
+-    
+
+-    Serial.println("OTA Update Starting");
+
+-    
+
+-  });
+
+-  
+
+-  ArduinoOTA.onEnd([]() {
+
+-    
+
+-    Serial.println("OTA Update Finished");
+
+-    
+
+-  });
+
+-  
+
+-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+
+-    
+
+-    Serial.printf("OTA Update Progress: %u%%\n", (progress / (total / 100)));
+
+-    
+
+-  });
+
+-  
+
+-  ArduinoOTA.onError([](ota_error_t error) {
+
+-    Serial.printf("Error[%u]: ", error);
+
+-    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+
+-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+
+-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+
+-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+
+-    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+
+-  });
+
+-  
+
+-  ArduinoOTA.begin();
+
+-  
+
+-  Serial.println("OTA Ready");
+
+-
+
+-}
+
++#include "OTAUpdate.h" + +OTAUpdate::OTAUpdate(){} + +OTAUpdate::~OTAUpdate(){} + +void OTAUpdate::begin(char const* host){ + + ArduinoOTA.setPort(8266); + + 
+ArduinoOTA.setHostname(host); + + ArduinoOTA.onStart([]() { + + Serial.println("OTA Update Starting"); + + }); + + ArduinoOTA.onEnd([]() { + + Serial.println("OTA Update 
+Finished"); + + }); + + ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) { + + Serial.printf("OTA Update Progress: %u%%\n", (progress / (total / 100))); 
++ + }); + + ArduinoOTA.onError([](ota_error_t error) { + Serial.printf("Error[%u]: ", error); + if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed"); + else if (error 
+== OTA_BEGIN_ERROR) Serial.println("Begin Failed"); + else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed"); + else if (error == OTA_RECEIVE_ERROR) 
+Serial.println("Receive Failed"); + else if (error == OTA_END_ERROR) Serial.println("End Failed"); + }); + + ArduinoOTA.begin(); + + Serial.println("OTA Ready"); + +} diff 
+--git a/src/utility/OTAUpdate.h b/src/utility/OTAUpdate.h index c3a5eaf..cb1729c 100644 --- a/src/utility/OTAUpdate.h +++ b/src/utility/OTAUpdate.h @@ -1,19 +1,19 @@
+-#ifndef OTAUpdate_H
+
+-#define OTAUpdate_H
+
+-
+
+-#include <Arduino.h>
+
+-#include <ESP8266mDNS.h>
+
+-#include <WiFiUdp.h>
+
+-#include <ArduinoOTA.h>
+
+-#include <ESP8266WiFi.h>
+
+-#include <WiFiClient.h>
+
+-
+
+-class OTAUpdate {
+
+-
+
+-public:
+
+-	OTAUpdate();
+
+-	~OTAUpdate();
+
+-	void begin(char const* host);
+
+-};
+
+-
+
+-#endif
+
++#ifndef OTAUpdate_H +#define OTAUpdate_H + +#include <Arduino.h> +#include <ESP8266mDNS.h> +#include <WiFiUdp.h> +#include <ArduinoOTA.h> +#include <ESP8266WiFi.h> 
++#include <WiFiClient.h> + +class OTAUpdate { + +public: +	OTAUpdate(); +	~OTAUpdate(); +	void begin(char const* host); +}; + +#endif diff --git 
+a/src/utility/Wifi.cpp b/src/utility/Wifi.cpp index f8c61a6..d7f679c 100644 --- a/src/utility/Wifi.cpp +++ b/src/utility/Wifi.cpp @@ -1,55 +1,55 @@
+-#include "Wifi.h"
+
+-
+
+-Wifi::Wifi(){}
+
+-
+
+-Wifi::~Wifi(){}
+
+-
+
+-void Wifi::begin(char const* wifi_ssid, char const* wifi_password){
+
+-
+
+-  WiFiManager wifiManager;
+
+-
+
+-  Serial.print("Connecting to ");
+
+-  Serial.println(wifi_ssid);
+
+-
+
+-  if (!wifiManager.autoConnect(wifi_ssid, wifi_password)){
+
+-	  
+
+-	Serial.println("failed to connect and hit timeout");
+
+-	delay(3000);
+
+-	//reset and try again, or maybe put it to deep sleep
+
+-	ESP.reset();
+
+-	delay(5000);
+
+-	  
+
+-  }
+
+-
+
+-
+
+-  Serial.println("");
+
+-  Serial.println("WiFi connected");
+
+-  Serial.println("IP address: ");
+
+-  Serial.println(WiFi.localIP());
+
+-  Serial.println("Started Up");
+
+-
+
+-}
+
+-
+
+-void Wifi::begin(){
+
+-
+
+-  WiFiManager wifiManager;
+
+-
+
+-  Serial.print("Using AutoWifi");
+
+-
+
+-  if (!wifiManager.autoConnect()){
+
+-	  
+
+-	Serial.println("failed to connect and hit timeout");
+
+-	delay(3000);
+
+-	//reset and try again, or maybe put it to deep sleep
+
+-	ESP.reset();
+
+-	delay(5000);
+
+-	  
+
+-  }
+
+-
+
+-  Serial.println("");
+
+-  Serial.println("WiFi connected");
+
+-  Serial.println("IP address: ");
+
+-  Serial.println(WiFi.localIP());
+
+-  Serial.println("Started Up");
+
+-
+
++#include "Wifi.h" + +Wifi::Wifi(){} + +Wifi::~Wifi(){} + +void Wifi::begin(char const* wifi_ssid, char const* wifi_password){ + + WiFiManager wifiManager; + + 
+Serial.print("Connecting to "); + Serial.println(wifi_ssid); + + if (!wifiManager.autoConnect(wifi_ssid, wifi_password)){ + + Serial.println("failed to connect and hit 
+timeout"); + delay(3000); + //reset and try again, or maybe put it to deep sleep + ESP.reset(); + delay(5000); + + } + + + Serial.println(""); + Serial.println("WiFi 
+connected"); + Serial.println("IP address: "); + Serial.println(WiFi.localIP()); + Serial.println("Started Up"); + +} + +void Wifi::begin(){ + + WiFiManager wifiManager; + 
++ Serial.print("Using AutoWifi"); + + if (!wifiManager.autoConnect()){ + + Serial.println("failed to connect and hit timeout"); + delay(3000); + //reset and try again, or 
+maybe put it to deep sleep + ESP.reset(); + delay(5000); + + } + + Serial.println(""); + Serial.println("WiFi connected"); + Serial.println("IP address: "); + 
+Serial.println(WiFi.localIP()); + Serial.println("Started Up"); +
+ }
+\ No newline at end of file diff --git a/src/utility/Wifi.h b/src/utility/Wifi.h index d4d46ad..89a4f35 100644 --- a/src/utility/Wifi.h +++ b/src/utility/Wifi.h @@ -1,20 
++1,20 @@
+-#ifndef Wifi_H
+
+-#define Wifi_H
+
+-
+
+-#include <ESP8266WiFi.h>
+
+-#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
+
+-#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
+
+-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
+
+-
+
+-class Wifi {
+
+-
+
+-public:
+
+-	
+
+-	Wifi();
+
+-	~Wifi();
+
+-	void begin(char const* wifi_ssid, char const* wifi_password);
+
+-	void begin();
+
+-
+
+-};
+
+-
+
+-#endif
+
++#ifndef Wifi_H +#define Wifi_H + +#include <ESP8266WiFi.h> +#include <DNSServer.h> //Local DNS Server used for redirecting all requests to the configuration portal 
++#include <ESP8266WebServer.h> //Local WebServer used to serve the configuration portal +#include <WiFiManager.h> //https://github.com/tzapu/WiFiManager WiFi Configuration 
+Magic + +class Wifi { + +public: + +	Wifi(); +	~Wifi(); +	void begin(char const* wifi_ssid, char const* wifi_password); +	void begin(); + +}; + +#endif

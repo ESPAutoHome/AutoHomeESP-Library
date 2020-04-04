@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <FS.h>
+#include <LittleFS.h>
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
 #include <DoubleResetDetector.h>

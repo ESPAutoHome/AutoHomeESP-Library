@@ -1,5 +1,4 @@
 #include "AutoHome.h"
-
 #define DRD_TIMEOUT 10
 #define DRD_ADDRESS 0
 
@@ -33,19 +32,10 @@ char j_device_serial[20];
 
 bool shouldSaveConfig = false;
 
-int watchdogTimeoutValue = 15000;
-bool watchdogRecieved = true;
-long previousWatchdogPacketTime = 0;
 
 AutoHome::AutoHome(){}
 
 AutoHome::~AutoHome(){}
-
-void AutoHome::setWatchdogTimeout(int timeout){
-
-	watchdogTimeoutValue = timeout;
-
-}
 
 void AutoHome::setPacketHandler(void(*mqttcallback)(char*,uint8_t*,unsigned int)){
 
@@ -81,7 +71,6 @@ char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
 	}
 
 	char autohomeTopic[] = "/autohome";
-	char watchdogTopic[] = "/autohome/watchdog";
 
     if(strcmp(topic, autohomeTopic) == 0){
 		
@@ -105,15 +94,6 @@ char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
 		return 1;
 		
 	}
-
-	if(strcmp(topic, watchdogTopic) == 0){
-
-		watchdogRecieved = true;
-		return 1;
-
-	}
-	
-	return 0;
   
 }
 
@@ -126,7 +106,7 @@ void saveConfigCallback() {
 
 void AutoHome::resetSettings(){
 	
-	SPIFFS.format();
+	LittleFS.format();
 	
 }
 
@@ -134,26 +114,20 @@ void AutoHome::begin(){
 	
 	Serial.println("mounting FS...");
 
-	if (SPIFFS.begin()) {
+	if (LittleFS.begin()) {
 		
 		Serial.println("mounted file system");
-		if (SPIFFS.exists("/AutoHome_config.json")) {
+		if (LittleFS.exists("/AutoHome_config.json")) {
 		  //file exists, reading and loading
 		  Serial.println("reading config file");
-		  File configFile = SPIFFS.open("/AutoHome_config.json", "r");
+		  File configFile = LittleFS.open("/AutoHome_config.json", "r");
 		  
 		  if (configFile) {
 			Serial.println("opened config file");
-			size_t size = configFile.size();
-			// Allocate a buffer to store contents of the file.
-			std::unique_ptr<char[]> buf(new char[size]);
 
-			configFile.readBytes(buf.get(), size);
-			DynamicJsonBuffer jsonBuffer;
-			JsonObject& json = jsonBuffer.parseObject(buf.get());
-			json.printTo(Serial);
-			
-			if (json.success()) {
+			DynamicJsonDocument json(2048);
+			DeserializationError dError = deserializeJson(json,configFile);			
+			if (!dError) {
 			  Serial.println("\nparsed json");
 
 			  strcpy(j_mqtt_server, json["j_mqtt_server"]);
@@ -167,11 +141,11 @@ void AutoHome::begin(){
 			  strcpy(j_device_serial, json["j_device_serial"]);
 
 			} else {
-				
+			  Serial.println(dError.c_str());
 			  Serial.println("failed to load json config");
 			  
 			}
-			
+			configFile.close();
 		  }
 		  
 		}
@@ -223,22 +197,18 @@ void AutoHome::begin(){
 	Serial.println("IP address: ");
 	Serial.println(WiFi.localIP());
 	Serial.println("Started Up");
-	
-	strcpy(j_mqtt_server, custom_mqtt_server.getValue());
-	strcpy(j_mqtt_port, custom_mqtt_port.getValue());
-	strcpy(j_mqtt_user, custom_mqtt_user.getValue());
-	strcpy(j_mqtt_password, custom_mqtt_password.getValue());
-	strcpy(j_mqtt_channel, custom_mqtt_channel.getValue());
-	strcpy(j_host, custom_host.getValue());
-	strcpy(j_device_name, custom_device_name.getValue());
-	strcpy(j_device_type, custom_device_type.getValue());
-	strcpy(j_device_serial, custom_device_serial.getValue());
-	
 	if (shouldSaveConfig) {
-		
+		strcpy(j_mqtt_server, custom_mqtt_server.getValue());
+		strcpy(j_mqtt_port, custom_mqtt_port.getValue());
+		strcpy(j_mqtt_user, custom_mqtt_user.getValue());
+		strcpy(j_mqtt_password, custom_mqtt_password.getValue());
+		strcpy(j_mqtt_channel, custom_mqtt_channel.getValue());
+		strcpy(j_host, custom_host.getValue());
+		strcpy(j_device_name, custom_device_name.getValue());
+		strcpy(j_device_type, custom_device_type.getValue());
+		strcpy(j_device_serial, custom_device_serial.getValue());
 		Serial.println("saving config");
-		DynamicJsonBuffer jsonBuffer;
-		JsonObject& json = jsonBuffer.createObject();
+		DynamicJsonDocument json(2048);
 		json["j_mqtt_server"] = j_mqtt_server;
 		json["j_mqtt_port"] = j_mqtt_port;
 		json["j_mqtt_user"] = j_mqtt_user;
@@ -249,23 +219,34 @@ void AutoHome::begin(){
 		json["j_device_type"] = j_device_type;
 		json["j_device_serial"] = j_device_serial;
 
-		File configFile = SPIFFS.open("/AutoHome_config.json", "w");
-		if (!configFile) {
+		File configFileSave = LittleFS.open("/AutoHome_config.json", "w");
+		if (!configFileSave) {
 		  Serial.println("failed to open config file for writing");
 		}
+		if(serializeJson(json,configFileSave) == 0){
+					Serial.println("failed to write");
+		}
+		serializeJson(json,Serial);
 
-		json.printTo(Serial);
-		json.printTo(configFile);
-		configFile.close();
-		
-		Serial.println("local ip");
-		Serial.println(WiFi.localIP());
-		
+		configFileSave.close();
+		Serial.println("saved config");
+		if (LittleFS.exists("/AutoHome_config.json")) {
+		  Serial.println("reading back config file");
+		  File configFileReadBack = LittleFS.open("/AutoHome_config.json", "r");
+		while (configFileReadBack.available()) {
+			Serial.print((char)configFileReadBack.read());
+		}
+  		  configFileReadBack.close();
+		}else {
+			Serial.println("saved file does not exist");
+		}
 	}
-
+	LittleFS.end();
 	String port = String(j_mqtt_port);
 	
 	pubclient.setServer(j_mqtt_server, port.toInt());
+
+	delay(30);
 
 	mqtt.reconnect(pubclient, j_mqtt_channel, j_host, j_mqtt_user, j_mqtt_password);
 
@@ -285,7 +266,7 @@ void AutoHome::begin(){
 
 void AutoHome::begin(char const* wifi_ssid, char const* wifi_password, char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* mqtt_channel){
 
-	Serial.println("AutoHome Starting");
+	Serial.println("AutoHome Starting a");
 
 	wifi.begin(wifi_ssid, wifi_password);
 
@@ -304,11 +285,13 @@ void AutoHome::begin(char const* wifi_ssid, char const* wifi_password, char cons
 
 void AutoHome::begin(char const* mqtt_ip, char const* mqtt_user, char const* mqtt_password, char const* host, char const* mqtt_channel){
 
-	Serial.println("AutoHome Starting");
+	Serial.println("AutoHome Starting b");
 
 	wifi.begin();
 
 	pubclient.setServer(mqtt_ip, 1883);
+
+	  delay(30);
 
 	mqtt.reconnect(pubclient, mqtt_channel, host, mqtt_user, mqtt_password);
 
@@ -335,21 +318,21 @@ void AutoHome::loop(){
 
 	drd.loop();
 
-	if(currentTime - previousWatchdogPacketTime >= watchdogTimeoutValue ){
+//	if(currentTime - previousWatchdogPacketTime >= watchdogTimeoutValue ){
+//
+//		previousWatchdogPacketTime = currentTime;
+//
+//		if(!watchdogRecieved){
+//
+//			ESP.restart();
+//
+//		} else {
 
-		previousWatchdogPacketTime = currentTime;
+//			watchdogRecieved = false;
 
-		if(!watchdogRecieved){
+//		}
 
-			ESP.restart();
-
-		} else {
-
-			watchdogRecieved = false;
-
-		}
-
-	}
+//	}
 
 }
 
