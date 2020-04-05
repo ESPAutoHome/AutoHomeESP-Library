@@ -293,8 +293,6 @@ void AutoHome::begin(char const* mqtt_ip, char const* mqtt_user, char const* mqt
 
 	pubclient.setServer(mqtt_ip, 1883);
 
-	//  delay(30);
-
 	mqtt.reconnect(pubclient, mqtt_channel, host, mqtt_user, mqtt_password);
 
 	p_mqtt_channel = mqtt_channel;
@@ -313,30 +311,13 @@ void AutoHome::loop(){
 	ArduinoOTA.handle();
 
 	if (!pubclient.connected()) {
+
 		mqtt.reconnect(pubclient, p_mqtt_channel, p_host, p_mqtt_user, p_mqtt_password);
 	}
 
 	pubclient.loop();
 
 	drd.loop();
-
-	// Serial.println(pubclient.connected());
-
-//	if(currentTime - previousWatchdogPacketTime >= watchdogTimeoutValue ){
-//
-//		previousWatchdogPacketTime = currentTime;
-//
-//		if(!watchdogRecieved){
-//
-//			ESP.restart();
-//
-//		} else {
-
-//			watchdogRecieved = false;
-
-//		}
-
-//	}
 
 }
 

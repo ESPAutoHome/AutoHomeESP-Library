@@ -9,16 +9,16 @@ void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char cons
 
   // Loop until we're reconnected
   if (!pubclient.connected()) {
+ //  if (!client.connected()) {
 
     Serial.print("Attempting MQTT connection...");
 
-    /* Connect to diffrent chennels */
 
+    /* Connect to diffrent chennels */
+//if (client.connect(mqtt_client, mqtt_user, mqtt_password)) {
     if (pubclient.connect(mqtt_client, mqtt_user, mqtt_password)) {
       Serial.println("connected");
-
- //     pubclient.publish("/autohome", "SCAN");
-//	autohome.sendPacket("/autohome", "SCAN");
+      pubclient.publish("outTopic", "hello world");
 
       pubclient.subscribe(mqtt_channel);
       pubclient.subscribe("/autohome");
@@ -27,8 +27,8 @@ void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char cons
       Serial.print("failed, rc=");
       Serial.print(pubclient.state());
       Serial.println(" try again in 5 seconds");  // ESP.restart();
-	Serial.println(" lost connection, resetting"); 
-	delay(1000);
+	    Serial.println(" lost connection, resetting"); 
+	    delay(5000);
 //	ESP.restart();
     }
 
