@@ -94,6 +94,8 @@ char AutoHome::mqtt_callback(char* topic, byte* payload, unsigned int length){
 		return 1;
 		
 	}
+
+	return 0;
   
 }
 
@@ -291,7 +293,7 @@ void AutoHome::begin(char const* mqtt_ip, char const* mqtt_user, char const* mqt
 
 	pubclient.setServer(mqtt_ip, 1883);
 
-	  delay(30);
+	//  delay(30);
 
 	mqtt.reconnect(pubclient, mqtt_channel, host, mqtt_user, mqtt_password);
 
@@ -317,6 +319,8 @@ void AutoHome::loop(){
 	pubclient.loop();
 
 	drd.loop();
+
+	// Serial.println(pubclient.connected());
 
 //	if(currentTime - previousWatchdogPacketTime >= watchdogTimeoutValue ){
 //

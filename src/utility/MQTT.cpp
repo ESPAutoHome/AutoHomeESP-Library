@@ -12,7 +12,6 @@ void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char cons
 
     Serial.print("Attempting MQTT connection...");
 
-
     /* Connect to diffrent chennels */
 
     if (pubclient.connect(mqtt_client, mqtt_user, mqtt_password)) {
