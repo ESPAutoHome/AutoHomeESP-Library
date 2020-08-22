@@ -2,10 +2,18 @@
 #define OTAUpdate_H
 
 #include <Arduino.h>
-#include <ESP8266mDNS.h>
+
+#if defined(ESP32)
+	#include <ESPmDNS.h>
+	#include <WiFi.h>
+		#elif
+			#include <ESP8266mDNS.h>
+			#include <ESP8266WiFi.h>
+#endif
+
+
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
-#include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 
 class OTAUpdate {

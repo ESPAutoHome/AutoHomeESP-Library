@@ -32,7 +32,6 @@ char j_device_serial[20];
 
 bool shouldSaveConfig = false;
 
-
 AutoHome::AutoHome(){}
 
 AutoHome::~AutoHome(){}
@@ -108,21 +107,24 @@ void saveConfigCallback() {
 
 void AutoHome::resetSettings(){
 	
-	LittleFS.format();
-	
+	// LittleFS.format();		// esp8266
+	   SPIFFS.format();
 }
 
 void AutoHome::begin(){
 	
 	Serial.println("mounting FS...");
 
-	if (LittleFS.begin()) {
-		
+//	if (LittleFS.begin()) {	// ESP8266
+	if (SPIFFS.begin()) {	// ESP32
+	
 		Serial.println("mounted file system");
-		if (LittleFS.exists("/AutoHome_config.json")) {
+//		if (LittleFS.exists("/AutoHome_config.json")) {	// ESP8266
+		if (SPIFFS.exists("/AutoHome_config.json")) {	// ESP32
 		  //file exists, reading and loading
 		  Serial.println("reading config file");
-		  File configFile = LittleFS.open("/AutoHome_config.json", "r");
+	//	  File configFile = LittleFS.open("/AutoHome_config.json", "r");	// esp8266
+		  File configFile = SPIFFS.open("/AutoHome_config.json", "r");	// ESP32
 		  
 		  if (configFile) {
 			Serial.println("opened config file");
@@ -189,7 +191,8 @@ void AutoHome::begin(){
 		Serial.println("failed to connect and hit timeout");
 		delay(3000);
 		//reset and try again, or maybe put it to deep sleep
-		ESP.reset();
+	//	ESP.reset();	// ESP8266
+		ESP.restart();	// esp32
 		delay(5000);
 	  
 	}
@@ -221,7 +224,8 @@ void AutoHome::begin(){
 		json["j_device_type"] = j_device_type;
 		json["j_device_serial"] = j_device_serial;
 
-		File configFileSave = LittleFS.open("/AutoHome_config.json", "w");
+//		File configFileSave = LittleFS.open("/AutoHome_config.json", "w");	// ESP8266
+		File configFileSave = SPIFFS.open("/AutoHome_config.json", "w");	// ESP32
 		if (!configFileSave) {
 		  Serial.println("failed to open config file for writing");
 		}
@@ -232,9 +236,11 @@ void AutoHome::begin(){
 
 		configFileSave.close();
 		Serial.println("saved config");
-		if (LittleFS.exists("/AutoHome_config.json")) {
+	//	if (LittleFS.exists("/AutoHome_config.json")) {		// ESP8266
+		if (SPIFFS.exists("/AutoHome_config.json")) {		// ESP32
 		  Serial.println("reading back config file");
-		  File configFileReadBack = LittleFS.open("/AutoHome_config.json", "r");
+		//  File configFileReadBack = LittleFS.open("/AutoHome_config.json", "r");	// ESP8266
+		    File configFileReadBack = SPIFFS.open("/AutoHome_config.json", "r");	// ESP	
 		while (configFileReadBack.available()) {
 			Serial.print((char)configFileReadBack.read());
 		}
@@ -243,7 +249,9 @@ void AutoHome::begin(){
 			Serial.println("saved file does not exist");
 		}
 	}
-	LittleFS.end();
+	// LittleFS.end();	// ESP8266
+	SPIFFS.end();		// ESP32
+	
 	String port = String(j_mqtt_port);
 	
 	pubclient.setServer(j_mqtt_server, port.toInt());
@@ -332,3 +340,47 @@ void AutoHome::sendPacket(char const* topic, char const* message){
 	pubclient.publish(topic, message);
 
 }
+///////////////////////////////////////////////////////
+
+
+// void ReadVariables(){
+// 	LittleFS.begin();
+// 	File verables = LittleFS.open("/verables", "r"); // opens the file on flash as "r" read
+// 	size_t FileSize = verables.size();             // get file size in bytes
+// 	if (FileSize >= 4) // check if file size is full or not.
+//   {
+//     verables.readBytes(*, FileSize);         // read file verables and put in buffer
+
+//     spEEd = buf[0];
+//     m0de = buf[2];
+//     Brightness = buf[3]; // overall brightness
+//   }
+//   verables.close(); // close file.
+//   	LittleFS.end();
+
+// }
+
+//   void WriteVerables()
+// {
+// 		LittleFS.begin();
+
+//   File verables = LittleFS.open("/verables", "w"); // open file verbales on SPIFF file system to write to.
+//   if (!verables)
+//   {
+//     Serial.println("error opening verbles file :C ");
+//     return;
+//   }
+//   char verableE[3] = {spEEd, cOl, m0de, Brightness}; // creat char array
+//   if (verables.print(verableE))                      // write char array to file system
+//   {
+//     Serial.print("wrote verables");
+//   }
+//   else
+//   {
+//     Serial.println("failed");
+//   }
+
+//   verables.close();
+//   	LittleFS.end();
+
+// }
