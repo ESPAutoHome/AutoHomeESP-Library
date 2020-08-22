@@ -29,7 +29,7 @@ void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char cons
       Serial.println(" try again in 5 seconds");  // ESP.restart();
 	    Serial.println(" lost connection, resetting"); 
 	    delay(5000);
-//	ESP.restart();
+	ESP.restart();
     }
 
   }

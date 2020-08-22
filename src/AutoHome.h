@@ -3,7 +3,13 @@
 
 #include <Arduino.h>
 #include <FS.h>
-#include <LittleFS.h>
+
+#if defined(ESP32)
+//	#include <LITTLEFS.h>
+	#include <SPIFFS.h>
+		#elif
+			#include <LittleFS.h>
+#endif
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
 #include <DoubleResetDetector.h>
@@ -13,6 +19,7 @@
 #include "utility/MQTT.h"
 
 #define MQTT_SIGNATURE void (*mqttcallback)(char*,uint8_t*,unsigned int)
+
 
 class AutoHome {
 private:

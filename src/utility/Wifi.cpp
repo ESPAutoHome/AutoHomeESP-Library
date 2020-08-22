@@ -16,7 +16,8 @@ void Wifi::begin(char const* wifi_ssid, char const* wifi_password){
 	Serial.println("failed to connect and hit timeout");
 	delay(3000);
 	//reset and try again, or maybe put it to deep sleep
-	ESP.reset();
+	//	ESP.reset();	// ESP8266
+		ESP.restart();	// esp32
 	delay(5000);
 	  
   }
@@ -41,7 +42,8 @@ void Wifi::begin(){
 	Serial.println("failed to connect and hit timeout");
 	delay(3000);
 	//reset and try again, or maybe put it to deep sleep
-	ESP.reset();
+	//	ESP.reset();	// ESP8266
+		ESP.restart();	// esp32
 	delay(5000);
 	  
   }
