@@ -12,7 +12,7 @@
 #endif
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
-#include <DoubleResetDetector.h>
+#include <ESP_DoubleResetDetector.h>
 
 #include "utility/Wifi.h"
 #include "utility/OTAUpdate.h"

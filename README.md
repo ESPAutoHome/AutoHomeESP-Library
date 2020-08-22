@@ -6,7 +6,7 @@ Librarys needed to run this library:
 	- PubSubClient - By Nick O'Leary - version 2.7.0
 	- WiFiManager - by tzapu,tablatronix - version 0.15.0
 	- ArduinoJson - by Benoit Blanchon - version 6.15.0
-	- DoubleResetDetector - by Stephen Denne - version 1.0.2
+	- ESP_DoubleResetDetector - by Khoi Hoang - version 1.0.3 - https://github.com/khoih-prog/ESP_DoubleResetDetector
 	
 Flash size settings for upload:
 
