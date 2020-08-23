@@ -4,7 +4,7 @@ This is an Arduino library that enables the ESP8266 to function as a home automa
 Librarys needed to run this library:
 
 	- PubSubClient - By Nick O'Leary - version 2.7.0
-	- WiFiManager - by tzapu,tablatronix - version 0.15.0
+	- WiFiManager - by tzapu,tablatronix - version 2.0.3-alpha
 	- ArduinoJson - by Benoit Blanchon - version 6.15.0
 	- ESP_DoubleResetDetector - by Khoi Hoang - version 1.0.3 - https://github.com/khoih-prog/ESP_DoubleResetDetector
 	
