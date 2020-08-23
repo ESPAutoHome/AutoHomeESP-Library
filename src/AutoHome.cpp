@@ -5,7 +5,7 @@
 #ifdef ARDUINO_ARCH_ESP32
 fs::SPIFFSFS *fileSystem = &SPIFFS;
 #else
-FS *fileSystem = &LittleFS; // ESP8266
+FS *fileSystem = &LittleFS;
 #endif
 
 Wifi wifi;
@@ -125,7 +125,11 @@ void AutoHome::begin()
 
 	Serial.println("mounting FS...");
 
+#ifdef ARDUINO_ARCH_ESP32
+	if (fileSystem->begin(true))
+#else
 	if (fileSystem->begin())
+#endif
 	{
 
 		Serial.println("mounted file system");
