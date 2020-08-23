@@ -1,38 +1,37 @@
 #include "MQTT.h"
 
-MQTT::MQTT(){}
+MQTT::MQTT() {}
 
-MQTT::~MQTT(){}
+MQTT::~MQTT() {}
 
-void MQTT::reconnect(PubSubClient pubclient, char const* mqtt_channel, char const* mqtt_client, char const* mqtt_user, char const* mqtt_password){
-
+void MQTT::reconnect(PubSubClient pubclient, char const *mqtt_channel, char const *mqtt_client, char const *mqtt_user, char const *mqtt_password)
+{
 
   // Loop until we're reconnected
-  if (!pubclient.connected()) {
- //  if (!client.connected()) {
+  if (!pubclient.connected())
+  {
+    //  if (!client.connected()) {
 
     Serial.print("Attempting MQTT connection...");
 
-
     /* Connect to diffrent chennels */
-//if (client.connect(mqtt_client, mqtt_user, mqtt_password)) {
-    if (pubclient.connect(mqtt_client, mqtt_user, mqtt_password)) {
+    //if (client.connect(mqtt_client, mqtt_user, mqtt_password)) {
+    if (pubclient.connect(mqtt_client, mqtt_user, mqtt_password))
+    {
       Serial.println("connected");
       pubclient.publish("outTopic", "hello world");
 
       pubclient.subscribe(mqtt_channel);
       pubclient.subscribe("/autohome");
-
-    } else {
+    }
+    else
+    {
       Serial.print("failed, rc=");
       Serial.print(pubclient.state());
-      Serial.println(" try again in 5 seconds");  // ESP.restart();
-	    Serial.println(" lost connection, resetting"); 
-	    delay(5000);
-	ESP.restart();
+      Serial.println(" try again in 5 seconds"); // ESP.restart();
+      Serial.println(" lost connection, resetting");
+      delay(5000);
+      ESP.restart();
     }
-
   }
-
-
 }
