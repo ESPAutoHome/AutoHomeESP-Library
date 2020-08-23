@@ -268,7 +268,9 @@ void AutoHome::begin()
 	fileSystem->end();
 
 	String port = String(j_mqtt_port);
-
+	Serial.println("MQTT settings:");
+	Serial.println("mqtt_server: " + String(j_mqtt_server));
+	Serial.println("mqtt_port: " + port);
 	pubclient.setServer(j_mqtt_server, port.toInt());
 
 	delay(30);
