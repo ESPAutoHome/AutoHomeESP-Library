@@ -1,14 +1,14 @@
 #include "AutoHome.h"
 #define DRD_TIMEOUT 10
 #define DRD_ADDRESS 0
-#define RETRY_DELAY_MS 5000
+#define RETRY_DELAY_MS 15000
 
 enum AutoHomeConnectionState
 {
-	wifi_config_portal,
-	trying_to_connect_to_wifi,
-	connected_to_wifi,
-	connected_to_wifi_and_mqtt
+	wifi_config_portal = 0,
+	trying_to_connect_to_wifi = 1,
+	connected_to_wifi = 2,
+	connected_to_wifi_and_mqtt = 4
 };
 
 AutoHomeConnectionState connectionState = trying_to_connect_to_wifi;
@@ -48,6 +48,16 @@ char j_device_name[20];
 char j_device_type[20];
 char j_device_serial[20];
 
+WiFiManagerParameter custom_mqtt_server("j_mqtt_server", "MQTT Server IP");
+WiFiManagerParameter custom_mqtt_port("j_mqtt_port", "MQTT Server Port");
+WiFiManagerParameter custom_mqtt_user("j_mqtt_user", "MQTT Username");
+WiFiManagerParameter custom_mqtt_password("j_mqtt_password", "MQTT password");
+WiFiManagerParameter custom_mqtt_channel("j_mqtt_channel", "MQTT channel");
+WiFiManagerParameter custom_host("j_host", "Host Name");
+WiFiManagerParameter custom_device_name("j_device_name", "Device Name");
+WiFiManagerParameter custom_device_type("j_device_type", "Device Type");
+WiFiManagerParameter custom_device_serial("j_device_serial", "Device Serial Number");
+
 bool shouldSaveConfig = false;
 
 AutoHome::AutoHome() {}
@@ -67,7 +77,8 @@ void AutoHome::resetSettings()
 
 void AutoHome::begin()
 {
-	for (int i = 0; i < len(j_mqtt_server); i++)
+	int j_mqtt_server_length = sizeof(j_mqtt_server) / sizeof(j_mqtt_server[0]);
+	for (int i = 0; i < j_mqtt_server_length; i++)
 	{
 		j_mqtt_server[i] = 0;
 	}
@@ -122,15 +133,15 @@ void AutoHome::begin()
 		Serial.println("Failed to mount FS");
 	}
 
-	WiFiManagerParameter custom_mqtt_server("j_mqtt_server", "MQTT Server IP", j_mqtt_server, 30);
-	WiFiManagerParameter custom_mqtt_port("j_mqtt_port", "MQTT Server Port", j_mqtt_port, 10);
-	WiFiManagerParameter custom_mqtt_user("j_mqtt_user", "MQTT Username", j_mqtt_user, 30);
-	WiFiManagerParameter custom_mqtt_password("j_mqtt_password", "MQTT password", j_mqtt_password, 30);
-	WiFiManagerParameter custom_mqtt_channel("j_mqtt_channel", "MQTT channel", j_mqtt_channel, 50);
-	WiFiManagerParameter custom_host("j_host", "Host Name", j_host, 20);
-	WiFiManagerParameter custom_device_name("j_device_name", "Device Name", j_device_name, 20);
-	WiFiManagerParameter custom_device_type("j_device_type", "Device Type", j_device_type, 20);
-	WiFiManagerParameter custom_device_serial("j_device_serial", "Device Serial Number", j_device_serial, 20);
+	custom_mqtt_server.setValue(j_mqtt_server, 30);
+	custom_mqtt_port.setValue(j_mqtt_port, 10);
+	custom_mqtt_user.setValue(j_mqtt_user, 30);
+	custom_mqtt_password.setValue(j_mqtt_password, 30);
+	custom_mqtt_channel.setValue(j_mqtt_channel, 50);
+	custom_host.setValue(j_host, 20);
+	custom_device_name.setValue(j_device_name, 20);
+	custom_device_type.setValue(j_device_type, 20);
+	custom_device_serial.setValue(j_device_serial, 20);
 
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
 
@@ -149,10 +160,13 @@ void AutoHome::begin()
 
 	// Checks if the mqtt server is set
 	bool isMqttServerSet = false;
-	for (int i = 0; i < len(j_mqtt_server); i++)
+	for (int i = 0; i < j_mqtt_server_length; i++)
 	{
 		if (j_mqtt_server[i] != 0)
+		{
 			isMqttServerSet = true;
+			break;
+		}
 	}
 
 	// Checks if we should show the config portal
@@ -184,7 +198,7 @@ void AutoHome::begin()
 	}
 }
 
-AutoHome::void connectedToWifi()
+void AutoHome::connectedToWifi()
 {
 	Serial.println("");
 	Serial.println("Wi-Fi connected");
@@ -292,18 +306,19 @@ void AutoHome::loop()
 	// The config portal is open
 	case wifi_config_portal:
 	{
-		wifimanager.process();
+		wifiManager.process();
 		if (shouldSaveConfig)
 		{
 			connectedToWifi();
 			shouldSaveConfig = false;
 		}
+		break;
 	}
 
 	// Try reconnect to the Wi-Fi
 	case trying_to_connect_to_wifi:
 	{
-		if (currentTime - lastRetryTime > RETRY_DELAY_MS)
+		if (abs(currentTime - lastRetryTime) > RETRY_DELAY_MS)
 		{
 			lastRetryTime = currentTime;
 			Serial.println("Trying to connect to Wi-Fi...");
@@ -314,16 +329,17 @@ void AutoHome::loop()
 			else
 			{
 				Serial.println("Failed to connect to Wi-Fi, will retry in a little while");
-				connectionState = trying_to_connect_to_wifi;
+				wifiManager.disconnect();
 			}
 		}
+		break;
 	}
 
 	// Connected to wifi but not MQTT
 	case connected_to_wifi:
 	{
 		ArduinoOTA.handle();
-		if (currentTime - lastRetryTime > RETRY_DELAY_MS)
+		if (abs(currentTime - lastRetryTime) > RETRY_DELAY_MS)
 		{
 			lastRetryTime = currentTime;
 			if (mqtt.reconnect(pubclient, p_mqtt_channel, p_host, p_mqtt_user, p_mqtt_password))
@@ -343,6 +359,7 @@ void AutoHome::loop()
 				connectionState = trying_to_connect_to_wifi;
 			}
 		}
+		break;
 	}
 
 	// Connected to wifi and MQTT
@@ -356,6 +373,7 @@ void AutoHome::loop()
 			return;
 		}
 		pubclient.loop();
+		break;
 	}
 	}
 }

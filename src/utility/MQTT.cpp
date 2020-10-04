@@ -13,7 +13,7 @@ bool MQTT::reconnect(
 {
   if (!pubclient.connected())
   {
-    Serial.print("Attempting MQTT connection...");
+    Serial.println("Attempting MQTT connection...");
     Serial.println("mqtt_channel: " + String(mqtt_channel));
     Serial.println("mqtt_client_name: " + String(mqtt_client_name));
     Serial.println("mqtt_user: " + String(mqtt_user));
@@ -22,8 +22,9 @@ bool MQTT::reconnect(
     /* Connect to diffrent chennels */
     if (pubclient.connect(mqtt_client_name, mqtt_user, mqtt_password))
     {
-      Serial.println("connected");
-      pubclient.publish("outTopic", "hello world from " + String(mqtt_client_name));
+      Serial.println("Connected successfully to MQTT");
+      String message = "hello world from " + String(mqtt_client_name);
+      pubclient.publish("outTopic", message.c_str());
 
       pubclient.subscribe(mqtt_channel);
       pubclient.subscribe("/autohome");
@@ -69,33 +70,26 @@ char MQTT::mqtt_callback(
     char const *mqtt_channel,
     int32_t RSSI)
 {
-
   String packet = "";
-
   for (int i = 0; i < length; i++)
   {
     packet = packet + (char)payload[i];
   }
 
   char autohomeTopic[] = "/autohome";
-
   if (strcmp(topic, autohomeTopic) == 0)
   {
-
     Serial.println("Autohome Packet");
-
     if (packet.equals("SCAN"))
     {
-
       Serial.println("Autohome Scan Packet");
-
       String responce = "SCANRET:" +
                         String(device_name) + ":" +
                         String(device_type) + ":" +
                         String(device_serial) + ":" +
                         String(mqtt_channel) + ":" +
                         String(RSSI);
-      sendPacket(pubclient, "/autohome", responce.c_str());
+      pubclient.publish("/autohome", responce.c_str());
     }
     else if (getValue(packet, ':', 0).equals("INFO"))
     {
@@ -106,12 +100,10 @@ char MQTT::mqtt_callback(
                           String(device_serial) + ":" +
                           String(mqtt_channel) + ":" +
                           String(RSSI);
-        sendPacket(pubclient, "/autohome", responce.c_str());
+        pubclient.publish("/autohome", responce.c_str());
       }
     }
-
     return 1;
   }
-
   return 0;
 }

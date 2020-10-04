@@ -13,7 +13,7 @@ public:
 
 	// Tries to reconnect to the MQTT server
 	// Returns true if successfully, otherwise false
-	bool MQTT::reconnect(
+	bool reconnect(
 		PubSubClient pubclient,
 		char const *mqtt_channel,
 		char const *mqtt_client_name,
@@ -21,11 +21,11 @@ public:
 		char const *mqtt_password);
 
 	// Reads the value from a MQTT package
-	String MQTT::getValue(String data, char separator, int index);
+	String getValue(String data, char separator, int index);
 
 	// A default implementation of the mqtt_callback
 	// It will echo the payload and the device information
-	char MQTT::mqtt_callback(
+	char mqtt_callback(
 		PubSubClient pubclient,
 		char *topic,
 		byte *payload,
