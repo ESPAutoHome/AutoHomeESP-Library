@@ -187,7 +187,7 @@ void AutoHome::begin()
 	}
 	else if (!wifiManager.autoConnect())
 	{
-		Serial.println("Failed to connect to wifi, will retry");
+		Serial.println("Failed to connect to Wi-Fi, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
 		connectionState = trying_to_connect_to_wifi;
 		lastRetryTime = millis();
 	}
@@ -328,8 +328,7 @@ void AutoHome::loop()
 			}
 			else
 			{
-				Serial.println("Failed to connect to Wi-Fi, will retry in a little while");
-				wifiManager.disconnect();
+				Serial.println("Failed to connect to Wi-Fi, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
 			}
 		}
 		break;
@@ -342,13 +341,14 @@ void AutoHome::loop()
 		if (abs(currentTime - lastRetryTime) > RETRY_DELAY_MS)
 		{
 			lastRetryTime = currentTime;
-			if (mqtt.reconnect(pubclient, p_mqtt_channel, p_host, p_mqtt_user, p_mqtt_password))
+			String hostName = String(p_host) + "_" + String(millis());
+			if (mqtt.reconnect(pubclient, p_mqtt_channel, hostName.c_str(), p_mqtt_user, p_mqtt_password))
 			{
 				connectionState = connected_to_wifi_and_mqtt;
 			}
 			else
 			{
-				Serial.println("Failed to connect to MQTT, will retry in a little while");
+				Serial.println("Failed to connect to MQTT, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
 				connectionState = connected_to_wifi;
 			}
 
