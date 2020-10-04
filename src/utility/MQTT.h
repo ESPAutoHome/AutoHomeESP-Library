@@ -4,12 +4,37 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
 
-class MQTT {
+class MQTT
+{
 
 public:
 	MQTT();
 	~MQTT();
-	void reconnect(PubSubClient pubclient, char const* mqtt_channel, char const* mqtt_client, char const* mqtt_user, char const* mqtt_password);
+
+	// Tries to reconnect to the MQTT server
+	// Returns true if successfully, otherwise false
+	bool reconnect(
+		PubSubClient pubclient,
+		char const *mqtt_channel,
+		char const *mqtt_client_name,
+		char const *mqtt_user,
+		char const *mqtt_password);
+
+	// Reads the value from a MQTT package
+	String getValue(String data, char separator, int index);
+
+	// A default implementation of the mqtt_callback
+	// It will echo the payload and the device information
+	char mqtt_callback(
+		PubSubClient pubclient,
+		char *topic,
+		byte *payload,
+		unsigned int length,
+		char const *device_name,
+		char const *device_type,
+		char const *device_serial,
+		char const *mqtt_channel,
+		int32_t RSSI);
 };
 
 #endif
