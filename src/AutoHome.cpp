@@ -318,7 +318,7 @@ void AutoHome::loop()
 	// Try reconnect to the Wi-Fi
 	case trying_to_connect_to_wifi:
 	{
-		if (abs(currentTime - lastRetryTime) > RETRY_DELAY_MS)
+		if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
 		{
 			lastRetryTime = currentTime;
 			Serial.println("Trying to connect to Wi-Fi...");
@@ -338,7 +338,7 @@ void AutoHome::loop()
 	case connected_to_wifi:
 	{
 		ArduinoOTA.handle();
-		if (abs(currentTime - lastRetryTime) > RETRY_DELAY_MS)
+		if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
 		{
 			lastRetryTime = currentTime;
 			String hostName = String(p_host) + "_" + String(millis());
