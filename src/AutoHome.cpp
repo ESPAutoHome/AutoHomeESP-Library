@@ -75,6 +75,19 @@ void AutoHome::resetSettings()
 	fileSystem->format();
 }
 
+void onMqttConnect(bool sessionPresent) {
+	Serial.println("Connected to MQTT.");
+}
+
+void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+	Serial.println("Disconnected from MQTT.");
+  
+	if (WiFi.isConnected()) {
+		connectionState = connected_to_wifi;
+	} 
+	
+  }
+
 void AutoHome::begin()
 {
 	int j_mqtt_server_length = sizeof(j_mqtt_server) / sizeof(j_mqtt_server[0]);
@@ -276,6 +289,9 @@ void AutoHome::connectedToWifi()
 	Serial.println("mqtt_server: " + String(j_mqtt_server));
 	Serial.println("mqtt_port: " + port);
 	mqttClient.setServer(j_mqtt_server, port.toInt());
+
+	mqttClient.onConnect(onMqttConnect);
+	mqttClient.onDisconnect(onMqttDisconnect);
 
 	delay(30);
 
