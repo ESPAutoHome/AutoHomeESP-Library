@@ -23,8 +23,6 @@ unsigned long lastRetryTime = 0;
 Wifi wifi;
 OTAUpdate ota;
 WiFiClient espClient;
-PubSubClient pubclient(espClient);
-MQTT mqtt;
 WiFiManager wifiManager;
 DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
@@ -94,7 +92,7 @@ void AutoHome::begin()
 		Serial.println("Mounted file system");
 		if (fileSystem->exists("/AutoHome_config.json"))
 		{
-			//file exists, reading and loading
+			// file exists, reading and loading
 			Serial.println("Reading config file");
 			File configFile = fileSystem->open("/AutoHome_config.json", "r");
 
@@ -275,7 +273,7 @@ void AutoHome::connectedToWifi()
 	Serial.println("MQTT settings:");
 	Serial.println("mqtt_server: " + String(j_mqtt_server));
 	Serial.println("mqtt_port: " + port);
-	pubclient.setServer(j_mqtt_server, port.toInt());
+	// pubclient.setServer(j_mqtt_server, port.toInt());
 
 	delay(30);
 
@@ -288,10 +286,10 @@ void AutoHome::connectedToWifi()
 	p_device_type = j_device_type;
 	p_device_serial = j_device_serial;
 
-	if (mqtt.reconnect(pubclient, p_mqtt_channel, p_host, p_mqtt_user, p_mqtt_password))
-	{
-		connectionState = connected_to_wifi_and_mqtt;
-	}
+	// if (mqtt.reconnect(pubclient, p_mqtt_channel, p_host, p_mqtt_user, p_mqtt_password))
+	// {
+	// 	connectionState = connected_to_wifi_and_mqtt;
+	// }
 
 	ota.begin(j_host);
 }
@@ -303,111 +301,107 @@ void AutoHome::loop()
 	switch (connectionState)
 	{
 
-	// The config portal is open
-	case wifi_config_portal:
-	{
-		wifiManager.process();
-		if (shouldSaveConfig)
+		// The config portal is open
+		case wifi_config_portal:
 		{
-			connectedToWifi();
-			shouldSaveConfig = false;
-		}
-		break;
-	}
-
-	// Try reconnect to the Wi-Fi
-	case trying_to_connect_to_wifi:
-	{
-		if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
-		{
-			lastRetryTime = currentTime;
-			Serial.println("Trying to connect to Wi-Fi...");
-			if (wifiManager.autoConnect())
+			wifiManager.process();
+			if (shouldSaveConfig)
 			{
 				connectedToWifi();
+				shouldSaveConfig = false;
 			}
-			else
-			{
-				Serial.println("Failed to connect to Wi-Fi, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
-			}
+			break;
 		}
-		break;
-	}
 
-	// Connected to wifi but not MQTT
-	case connected_to_wifi:
-	{
-		ArduinoOTA.handle();
-		if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
+		// Try reconnect to the Wi-Fi
+		case trying_to_connect_to_wifi:
 		{
-			lastRetryTime = currentTime;
-			String hostName = String(p_host) + "_" + String(millis());
-			if (mqtt.reconnect(pubclient, p_mqtt_channel, hostName.c_str(), p_mqtt_user, p_mqtt_password))
+			if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
 			{
-				connectionState = connected_to_wifi_and_mqtt;
+				lastRetryTime = currentTime;
+				Serial.println("Trying to connect to Wi-Fi...");
+				if (wifiManager.autoConnect())
+				{
+					connectedToWifi();
+				}
+				else
+				{
+					Serial.println("Failed to connect to Wi-Fi, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
+				}
 			}
-			else
-			{
-				Serial.println("Failed to connect to MQTT, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
-				connectionState = connected_to_wifi;
-			}
-
-			// Checks if we have lost connection to the wifi
-			if (!wifiManager.autoConnect())
-			{
-				Serial.println("Lost connection to the Wi-Fi");
-				connectionState = trying_to_connect_to_wifi;
-			}
+			break;
 		}
-		break;
-	}
 
-	// Connected to wifi and MQTT
-	case connected_to_wifi_and_mqtt:
-	{
-		ArduinoOTA.handle();
-		if (!pubclient.connected())
+		// Connected to wifi but not MQTT
+		case connected_to_wifi:
 		{
-			Serial.println("Lost connection to the MQTT");
-			connectionState = connected_to_wifi;
-			return;
+			ArduinoOTA.handle();
+			if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
+			{
+				lastRetryTime = currentTime;
+				String hostName = String(p_host) + "_" + String(millis());
+				// if (mqtt.reconnect(pubclient, p_mqtt_channel, hostName.c_str(), p_mqtt_user, p_mqtt_password))
+				// {
+				// 	connectionState = connected_to_wifi_and_mqtt;
+				// }
+				// else
+				// {
+				// 	Serial.println("Failed to connect to MQTT, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
+				// 	connectionState = connected_to_wifi;
+				// }
+
+				// Checks if we have lost connection to the wifi
+				if (!wifiManager.autoConnect())
+				{
+					Serial.println("Lost connection to the Wi-Fi");
+					connectionState = trying_to_connect_to_wifi;
+				}
+			}
+			break;
 		}
-		pubclient.loop();
-		break;
-	}
+
+		// Connected to wifi and MQTT
+		case connected_to_wifi_and_mqtt:
+		{
+			ArduinoOTA.handle();
+			break;
+		}
 	}
 }
 
 void AutoHome::setPacketHandler(void (*mqttcallback)(char *, uint8_t *, unsigned int))
 {
-	pubclient.setCallback(mqttcallback);
+	// pubclient.setCallback(mqttcallback);
 }
 
 void AutoHome::sendPacket(char const *message)
 {
-	pubclient.publish(p_mqtt_channel, message);
+	// pubclient.publish(p_mqtt_channel, message);
 }
 
 void AutoHome::sendPacket(char const *topic, char const *message)
 {
-	pubclient.publish(topic, message);
+	// pubclient.publish(topic, message);
 }
 
 String AutoHome::getValue(String data, char separator, int index)
 {
-	return mqtt.getValue(data, separator, index);
+	// return mqtt.getValue(data, separator, index);
+	return "";
 }
 
 char AutoHome::mqtt_callback(char *topic, byte *payload, unsigned int length)
 {
-	return mqtt.mqtt_callback(
-		pubclient,
-		topic,
-		payload,
-		length,
-		p_device_name,
-		p_device_type,
-		p_device_serial,
-		p_mqtt_channel,
-		WiFi.RSSI());
+	// return mqtt.mqtt_callback(
+	// 	pubclient,
+	// 	topic,
+	// 	payload,
+	// 	length,
+	// 	p_device_name,
+	// 	p_device_type,
+	// 	p_device_serial,
+	// 	p_mqtt_channel,
+	// 	WiFi.RSSI());
+
+	return 'N';
 }

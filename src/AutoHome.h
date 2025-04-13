@@ -15,7 +15,6 @@
 
 #include "utility/Wifi.h"
 #include "utility/OTAUpdate.h"
-#include "utility/MQTT.h"
 
 #define MQTT_SIGNATURE void (*mqttcallback)(char *, uint8_t *, unsigned int)
 
