@@ -80,6 +80,10 @@ void AutoHome::resetSettings()
 void onMqttConnect(bool sessionPresent)
 {
 	Serial.println("Connected to MQTT.");
+
+	pubclient.subscribe(p_mqtt_channel, 0);
+    pubclient.subscribe("/autohome", 0);
+
 	connectionState = connected_to_wifi_and_mqtt;
 }
 
