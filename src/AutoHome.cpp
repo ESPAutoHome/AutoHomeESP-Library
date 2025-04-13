@@ -77,6 +77,7 @@ void AutoHome::resetSettings()
 
 void onMqttConnect(bool sessionPresent) {
 	Serial.println("Connected to MQTT.");
+	connectionState = connected_to_wifi_and_mqtt;
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
@@ -289,6 +290,7 @@ void AutoHome::connectedToWifi()
 	Serial.println("mqtt_server: " + String(j_mqtt_server));
 	Serial.println("mqtt_port: " + port);
 	mqttClient.setServer(j_mqtt_server, port.toInt());
+	mqttClient.setCredentials(p_mqtt_user, p_mqtt_password);
 
 	mqttClient.onConnect(onMqttConnect);
 	mqttClient.onDisconnect(onMqttDisconnect);
@@ -358,7 +360,7 @@ void AutoHome::loop()
 		case connected_to_wifi:
 		{
 
-			Serial.println("State: connected_to_wifi");
+			// Serial.println("State: connected_to_wifi");
 
 			ArduinoOTA.handle();
 			if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
