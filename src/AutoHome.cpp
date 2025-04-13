@@ -48,6 +48,8 @@ char j_device_name[20];
 char j_device_type[20];
 char j_device_serial[20];
 
+void (*storedCallback)(char *, uint8_t *, unsigned int) = nullptr;
+
 WiFiManagerParameter custom_mqtt_server("j_mqtt_server", "MQTT Server IP");
 WiFiManagerParameter custom_mqtt_port("j_mqtt_port", "MQTT Server Port");
 WiFiManagerParameter custom_mqtt_user("j_mqtt_user", "MQTT Username");
@@ -75,19 +77,26 @@ void AutoHome::resetSettings()
 	fileSystem->format();
 }
 
-void onMqttConnect(bool sessionPresent) {
+void onMqttConnect(bool sessionPresent)
+{
 	Serial.println("Connected to MQTT.");
 	connectionState = connected_to_wifi_and_mqtt;
 }
 
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
+{
 	Serial.println("Disconnected from MQTT.");
-  
-	if (WiFi.isConnected()) {
-		connectionState = connected_to_wifi;
-	} 
 
-  }
+	if (WiFi.isConnected())
+	{
+		connectionState = connected_to_wifi;
+	}
+}
+
+void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
+{
+	storedCallback(topic, (uint8_t*)payload, (int)len);
+}
 
 void AutoHome::begin()
 {
@@ -291,15 +300,17 @@ void AutoHome::connectedToWifi()
 	Serial.println("mqtt_port: " + port);
 	mqttClient.setServer(j_mqtt_server, port.toInt());
 
-	if(j_mqtt_password && j_mqtt_password[0] != '\0'){
+	if (j_mqtt_password && j_mqtt_password[0] != '\0')
+	{
 		Serial.println("MQTT Credentials given");
 		mqttClient.setCredentials(j_mqtt_user, j_mqtt_password);
 	}
-	
+
 	mqttClient.setClientId(j_device_name);
 
 	mqttClient.onConnect(onMqttConnect);
 	mqttClient.onDisconnect(onMqttDisconnect);
+	mqttClient.onMessage(onMqttMessage);
 
 	delay(30);
 
@@ -330,85 +341,87 @@ void AutoHome::loop()
 	switch (connectionState)
 	{
 
-		// The config portal is open
-		case wifi_config_portal:
+	// The config portal is open
+	case wifi_config_portal:
+	{
+		wifiManager.process();
+		if (shouldSaveConfig)
 		{
-			wifiManager.process();
-			if (shouldSaveConfig)
+			connectedToWifi();
+			shouldSaveConfig = false;
+		}
+		break;
+	}
+
+	// Try reconnect to the Wi-Fi
+	case trying_to_connect_to_wifi:
+	{
+		Serial.println("State: trying_to_connect_to_wifi");
+		if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
+		{
+			lastRetryTime = currentTime;
+			Serial.println("Trying to connect to Wi-Fi...");
+			if (wifiManager.autoConnect())
 			{
 				connectedToWifi();
-				shouldSaveConfig = false;
 			}
-			break;
-		}
-
-		// Try reconnect to the Wi-Fi
-		case trying_to_connect_to_wifi:
-		{
-			Serial.println("State: trying_to_connect_to_wifi");
-			if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
+			else
 			{
-				lastRetryTime = currentTime;
-				Serial.println("Trying to connect to Wi-Fi...");
-				if (wifiManager.autoConnect())
-				{
-					connectedToWifi();
-				}
-				else
-				{
-					Serial.println("Failed to connect to Wi-Fi, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
-				}
+				Serial.println("Failed to connect to Wi-Fi, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
 			}
-			break;
 		}
+		break;
+	}
 
-		// Connected to wifi but not MQTT
-		case connected_to_wifi:
+	// Connected to wifi but not MQTT
+	case connected_to_wifi:
+	{
+
+		// Serial.println("State: connected_to_wifi");
+
+		ArduinoOTA.handle();
+		if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
 		{
+			lastRetryTime = currentTime;
+			String hostName = String(p_host) + "_" + String(millis());
 
-			// Serial.println("State: connected_to_wifi");
-
-			ArduinoOTA.handle();
-			if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
+			if (!mqttClient.connected())
 			{
-				lastRetryTime = currentTime;
-				String hostName = String(p_host) + "_" + String(millis());
 
-				if(!mqttClient.connected()){
+				Serial.println("Lost connection to the MQTT Server");
 
-					Serial.println("Lost connection to the MQTT Server");
-
-					mqttClient.connect();
-					connectionState = connected_to_wifi_and_mqtt;
-				}
-
-				// Checks if we have lost connection to the wifi
-				if (!wifiManager.autoConnect())
-				{
-					Serial.println("Lost connection to the Wi-Fi");
-					connectionState = trying_to_connect_to_wifi;
-				}
+				mqttClient.connect();
+				connectionState = connected_to_wifi_and_mqtt;
 			}
-			break;
-		}
 
-		// Connected to wifi and MQTT
-		case connected_to_wifi_and_mqtt:
+			// Checks if we have lost connection to the wifi
+			if (!wifiManager.autoConnect())
+			{
+				Serial.println("Lost connection to the Wi-Fi");
+				connectionState = trying_to_connect_to_wifi;
+			}
+		}
+		break;
+	}
+
+	// Connected to wifi and MQTT
+	case connected_to_wifi_and_mqtt:
+	{
+		ArduinoOTA.handle();
+
+		if (!mqttClient.connected())
 		{
-			ArduinoOTA.handle();
-
-			if(!mqttClient.connected()){
-				connectionState = connected_to_wifi;
-			}
-
-			break;
+			connectionState = connected_to_wifi;
 		}
+
+		break;
+	}
 	}
 }
 
 void AutoHome::setPacketHandler(void (*mqttcallback)(char *, uint8_t *, unsigned int))
 {
-	// pubclient.setCallback(mqttcallback);
+	storedCallback = mqttcallback;
 }
 
 void AutoHome::sendPacket(char const *message)
@@ -423,22 +436,64 @@ void AutoHome::sendPacket(char const *topic, char const *message)
 
 String AutoHome::getValue(String data, char separator, int index)
 {
-	// return mqtt.getValue(data, separator, index);
-	return "";
+	int found = 0;
+	int strIndex[] = {0, -1};
+	int maxIndex = data.length() - 1;
+
+	for (int i = 0; i <= maxIndex && found <= index; i++)
+	{
+		if (data.charAt(i) == separator || i == maxIndex)
+		{
+			found++;
+			strIndex[0] = strIndex[1] + 1;
+			strIndex[1] = (i == maxIndex) ? i + 1 : i;
+		}
+	}
+
+	return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
 char AutoHome::mqtt_callback(char *topic, byte *payload, unsigned int length)
 {
-	// return mqtt.mqtt_callback(
-	// 	pubclient,
-	// 	topic,
-	// 	payload,
-	// 	length,
-	// 	p_device_name,
-	// 	p_device_type,
-	// 	p_device_serial,
-	// 	p_mqtt_channel,
-	// 	WiFi.RSSI());
+	
+	String packet = "";
+	for (int i = 0; i < length; i++)
+	{
+		packet = packet + (char)payload[i];
+	}
 
+	char autohomeTopic[] = "/autohome";
+	if (strcmp(topic, autohomeTopic) == 0)
+	{
+		Serial.println("Autohome Packet");
+		if (packet.equals("SCAN"))
+		{
+			Serial.println("Autohome Scan Packet");
+			String responce = "SCANRET:" +
+							  String(p_device_name) + ":" +
+							  String(p_device_type) + ":" +
+							  String(p_device_serial) + ":" +
+							  String(p_mqtt_channel) + ":" +
+							  String(WiFi.RSSI());
+			mqttClient.publish("/autohome", 0, true, responce.c_str());
+		}
+		else if (getValue(packet, ':', 0).equals("INFO"))
+		{
+			if (String(p_device_name).equals(getValue(packet, ':', 1)))
+			{
+				String responce = "INFORES:" + String(p_device_name) + ":" +
+								  String(p_device_name) + ":" +
+								  String(p_device_serial) + ":" +
+								  String(p_mqtt_channel) + ":" +
+								  String(WiFi.RSSI());
+				mqttClient.publish("/autohome", 0, true, responce.c_str());
+			}
+		}
+		return 1;
+	}
+
+	Serial.print("Received message on topic: ");
+	Serial.print(topic);
+	Serial.println();
 	return 0;
 }
