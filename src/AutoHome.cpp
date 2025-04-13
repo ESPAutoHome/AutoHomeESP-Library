@@ -496,6 +496,7 @@ char AutoHome::mqtt_callback(char *topic, byte *payload, unsigned int length)
 		return 1;
 	}
 
+	Serial.println();
 	Serial.print("Received message on topic: ");
 	Serial.print(topic);
 	Serial.println();

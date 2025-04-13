@@ -3,10 +3,10 @@ This is an Arduino library that enables the ESP8266 to function as a home automa
 
 Librarys needed to run this library:
 
-	- PubSubClient - By Nick O'Leary - version 2.7.0
-	- // not used any more // WiFiManager - by tzapu,tablatronix - version 2.0.3-alpha 
-	- WiFiManager - by tzapu,	- version 0.16 
-	- ArduinoJson - by Benoit Blanchon - version 6.15.0
+	- PubSubClient - By Marvin Roger - https://github.com/marvinroger/async-mqtt-client/tree/develop
+	- Async TCP - By ESP32Async - version 3.3.8
+	- WiFiManager - by tzapu,	- version 2.0.17 
+	- ArduinoJson - by Benoit Blanchon - version 7.4.1
 	- ESP_DoubleResetDetector - by Khoi Hoang - version 1.0.3 - https://github.com/khoih-prog/ESP_DoubleResetDetector
 	
 Flash size settings for upload:

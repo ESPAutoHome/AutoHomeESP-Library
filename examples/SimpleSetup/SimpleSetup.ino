@@ -7,7 +7,7 @@ AutoHome autohome;
 /* This function will be called every time a packet is received from the mqtt topic. */
 /* This is registered in the setup() */
 void mqtt_callback(char* topic, byte* payload, unsigned int length){
-  Serial.print("Message arrived [");
+  
   if(!autohome.mqtt_callback(topic, payload, length)){
 
       String packet = "";
