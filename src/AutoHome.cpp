@@ -290,7 +290,13 @@ void AutoHome::connectedToWifi()
 	Serial.println("mqtt_server: " + String(j_mqtt_server));
 	Serial.println("mqtt_port: " + port);
 	mqttClient.setServer(j_mqtt_server, port.toInt());
-	mqttClient.setCredentials(p_mqtt_user, p_mqtt_password);
+
+	if(j_mqtt_password && j_mqtt_password[0] != '\0'){
+		Serial.println("MQTT Credentials given");
+		mqttClient.setCredentials(j_mqtt_user, j_mqtt_password);
+	}
+	
+	mqttClient.setClientId(j_device_name);
 
 	mqttClient.onConnect(onMqttConnect);
 	mqttClient.onDisconnect(onMqttDisconnect);
