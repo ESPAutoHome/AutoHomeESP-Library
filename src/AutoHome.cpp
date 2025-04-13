@@ -26,6 +26,8 @@ WiFiClient espClient;
 WiFiManager wifiManager;
 DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
+AsyncMqttClient mqttClient;
+
 char const *p_mqtt_channel;
 char const *p_host;
 char const *p_mqtt_user;
@@ -273,7 +275,7 @@ void AutoHome::connectedToWifi()
 	Serial.println("MQTT settings:");
 	Serial.println("mqtt_server: " + String(j_mqtt_server));
 	Serial.println("mqtt_port: " + port);
-	// pubclient.setServer(j_mqtt_server, port.toInt());
+	mqttClient.setServer(j_mqtt_server, port.toInt());
 
 	delay(30);
 
@@ -286,10 +288,12 @@ void AutoHome::connectedToWifi()
 	p_device_type = j_device_type;
 	p_device_serial = j_device_serial;
 
-	// if (mqtt.reconnect(pubclient, p_mqtt_channel, p_host, p_mqtt_user, p_mqtt_password))
-	// {
-	// 	connectionState = connected_to_wifi_and_mqtt;
-	// }
+	mqttClient.connect();
+
+	if (mqttClient.connected())
+	{
+		connectionState = connected_to_wifi_and_mqtt;
+	}
 
 	ota.begin(j_host);
 }
@@ -340,15 +344,14 @@ void AutoHome::loop()
 			{
 				lastRetryTime = currentTime;
 				String hostName = String(p_host) + "_" + String(millis());
-				// if (mqtt.reconnect(pubclient, p_mqtt_channel, hostName.c_str(), p_mqtt_user, p_mqtt_password))
-				// {
-				// 	connectionState = connected_to_wifi_and_mqtt;
-				// }
-				// else
-				// {
-				// 	Serial.println("Failed to connect to MQTT, will retry in " + String(RETRY_DELAY_MS) + "ms ...");
-				// 	connectionState = connected_to_wifi;
-				// }
+
+				if(!mqttClient.connected()){
+
+					Serial.println("Lost connection to the MQTT Server");
+
+					mqttClient.connect();
+					connectionState = connected_to_wifi_and_mqtt;
+				}
 
 				// Checks if we have lost connection to the wifi
 				if (!wifiManager.autoConnect())
@@ -364,6 +367,11 @@ void AutoHome::loop()
 		case connected_to_wifi_and_mqtt:
 		{
 			ArduinoOTA.handle();
+
+			if(!mqttClient.connected()){
+				connectionState = connected_to_wifi;
+			}
+
 			break;
 		}
 	}
@@ -376,12 +384,12 @@ void AutoHome::setPacketHandler(void (*mqttcallback)(char *, uint8_t *, unsigned
 
 void AutoHome::sendPacket(char const *message)
 {
-	// pubclient.publish(p_mqtt_channel, message);
+	mqttClient.publish(p_mqtt_channel, 0, false, message);
 }
 
 void AutoHome::sendPacket(char const *topic, char const *message)
 {
-	// pubclient.publish(topic, message);
+	mqttClient.publish(topic, 0, false, message);
 }
 
 String AutoHome::getValue(String data, char separator, int index)
@@ -403,5 +411,5 @@ char AutoHome::mqtt_callback(char *topic, byte *payload, unsigned int length)
 	// 	p_mqtt_channel,
 	// 	WiFi.RSSI());
 
-	return 'N';
+	return 0;
 }

@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <FS.h>
 
+#include <AsyncMqttClient.h>
+
 #ifdef ARDUINO_ARCH_ESP32
 #include <SPIFFS.h>
 #else
