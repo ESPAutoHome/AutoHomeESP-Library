@@ -85,7 +85,7 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
 	if (WiFi.isConnected()) {
 		connectionState = connected_to_wifi;
 	} 
-	
+
   }
 
 void AutoHome::begin()
@@ -304,6 +304,7 @@ void AutoHome::connectedToWifi()
 	p_device_type = j_device_type;
 	p_device_serial = j_device_serial;
 
+	Serial.println("Ininital MQTT Connect.");
 	mqttClient.connect();
 
 	if (mqttClient.connected())
@@ -336,6 +337,7 @@ void AutoHome::loop()
 		// Try reconnect to the Wi-Fi
 		case trying_to_connect_to_wifi:
 		{
+			Serial.println("State: trying_to_connect_to_wifi");
 			if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
 			{
 				lastRetryTime = currentTime;
@@ -355,6 +357,9 @@ void AutoHome::loop()
 		// Connected to wifi but not MQTT
 		case connected_to_wifi:
 		{
+
+			Serial.println("State: connected_to_wifi");
+
 			ArduinoOTA.handle();
 			if (abs(int(currentTime - lastRetryTime)) > RETRY_DELAY_MS)
 			{
